@@ -34,6 +34,7 @@ kill switch as the runner); a failed platform is retried next hour
 nothing to Content Rewards. Instagram is staged only — the parent VM
 posts Reels from ig-outbox/ via instagram-cli.
 """
+import fcntl
 import json
 import shutil
 import subprocess
@@ -95,6 +96,35 @@ def save_queue(entries):
     tmp = QUEUE_FILE.with_suffix(".json.tmp")
     tmp.write_text(json.dumps(entries, indent=2))
     tmp.replace(QUEUE_FILE)
+
+
+QUEUE_LOCK = QUEUE_FILE.with_suffix(".lock")
+
+
+def save_entry(entry):
+    """Persist ONE entry's updated fields, merging onto the CURRENT
+    disk state instead of rewriting the whole in-memory snapshot.
+
+    Root cause (2026-11-16): main() loaded the queue at slot start
+    and save_queue() rewrote the whole list at slot end. Anything
+    staged mid-slot by runner.stage_to_queue() was silently wiped —
+    that is how live-kick-adinross-72s vanished between 13:30:25 and
+    13:35:25 (poster loaded 34 entries at 13:30:00, staging added the
+    35th, poster saved its stale 34 at ~13:34). Re-reading disk here
+    preserves mid-slot stagings. The lock serializes this
+    read-modify-write against runner.stage_to_queue(), which takes
+    the same lock file.
+    """
+    with open(QUEUE_LOCK, "w") as lf:
+        fcntl.flock(lf, fcntl.LOCK_EX)
+        fresh = load_queue()
+        for i, fe in enumerate(fresh):
+            if fe.get("id") == entry.get("id"):
+                fresh[i] = entry
+                break
+        else:
+            fresh.append(entry)
+        save_queue(fresh)
 
 
 def next_slot():
@@ -374,7 +404,7 @@ def main():
         except Exception as e:
             log(f"{entry['id']}: unexpected post error: {e}")
             done = False
-        save_queue(entries)
+        save_entry(entry)
         log(f"{entry['id']}: slot done, status={entry['status']}")
         time.sleep(60)  # avoid double-firing within the same slot
 

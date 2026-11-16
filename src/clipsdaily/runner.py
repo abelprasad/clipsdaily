@@ -13,6 +13,7 @@ Rate limits: max 1 clip per streamer per 5 min, max 20 clips/day total.
 The per-streamer cooldown is shared across platforms: xqc on Twitch
 and Kick is one streamer, so the same moment never makes two clips.
 """
+import fcntl
 import json
 import sys
 import threading
@@ -105,28 +106,33 @@ def stage_to_queue(clip, tiktok_clip, channel, platform, spike,
         "source": "live",
         "campaign_eligible": False,
     }
-    try:
-        entries = json.loads(qf.read_text()) if qf.exists() else []
-    except Exception:
-        entries = []
-    if any(e.get("id") == entry_id for e in entries):
-        print(f"[runner] {entry_id} already in queue, not re-staging",
-              flush=True)
-        return False
-    entries.insert(0, entry)
-    tmp = qf.with_suffix(".json.tmp")
-    tmp.write_text(json.dumps(entries, indent=2))
-    tmp.replace(qf)
-    # Verify the write stuck (the hourly poster also writes this file
-    # at slot boundaries; if our entry got clobbered, say so loudly).
-    try:
-        check = json.loads(qf.read_text())
-        stuck = any(e.get("id") == entry_id for e in check)
-    except Exception:
-        stuck = False
-    print(f"[runner] staged {entry_id} at front of queue "
-          f"({'verified' if stuck else 'WRITE NOT VERIFIED'})", flush=True)
-    return stuck
+    # Same queue lock as hourly_poster.save_entry(): without it, a
+    # poster save landing between our load and our write silently
+    # drops this entry (lost live-kick-adinross-72s, 2026-11-16).
+    lock_path = qf.with_suffix(".lock")
+    with open(lock_path, "w") as lf:
+        fcntl.flock(lf, fcntl.LOCK_EX)
+        try:
+            entries = json.loads(qf.read_text()) if qf.exists() else []
+        except Exception:
+            entries = []
+        if any(e.get("id") == entry_id for e in entries):
+            print(f"[runner] {entry_id} already in queue, not re-staging",
+                  flush=True)
+            return False
+        entries.insert(0, entry)
+        tmp = qf.with_suffix(".json.tmp")
+        tmp.write_text(json.dumps(entries, indent=2))
+        tmp.replace(qf)
+        # Verify the write stuck while still holding the lock.
+        try:
+            check = json.loads(qf.read_text())
+            stuck = any(e.get("id") == entry_id for e in check)
+        except Exception:
+            stuck = False
+        print(f"[runner] staged {entry_id} at front of queue "
+              f"({'verified' if stuck else 'WRITE NOT VERIFIED'})", flush=True)
+        return stuck
 
 
 def stop_requested():

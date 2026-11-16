@@ -14,22 +14,25 @@ if [ ! -x /tmp/indra.sh ]; then
   printf '#!/bin/bash\nexec ssh -o UserKnownHostsFile=/home/hatch/.ssh/known_hosts -i /home/hatch/.ssh/id_ed25519 -o ProxyCommand="python3 /tmp/ssh-tail-proxy.py %%h %%p" friday@100.78.151.90 "$@"\n' > /tmp/indra.sh
   chmod 700 /tmp/indra.sh
 fi
-[ -x /tmp/indra.sh ] || exit 0
+[ -x /tmp/indra.sh ] || { echo "ig-post-staged: /tmp/indra.sh missing and restore failed" >&2; exit 0; }
 
 NOW_EPOCH=$(date +%s)
 CLIP_ID=""
 BEST_AGE=999999
+NEWEST_SLOT=""
+NEWEST_AGE=""
 for d in $(/tmp/indra.sh "ls $OUTBOX_BASE 2>/dev/null"); do
   m="$OUTBOX_BASE/$d/meta.json"
   STATUS=$(/tmp/indra.sh "grep -o '\"status\": *\"[a-z]*\"' $m 2>/dev/null | head -1")
   echo "$STATUS" | grep -q '"staged"' || continue
   SLOT=$(/tmp/indra.sh "grep -o '\"ig_slot\": *\"[^\"]*\"' $m 2>/dev/null | head -1 | sed 's/.*\"\(....-..-..T..:..\)\".*/\1/'")
   [ -n "$SLOT" ] || continue
-  SLOT_EPOCH=$(date -d "$SLOT" +%s 2>/dev/null) || continue
+  SLOT_EPOCH=$(TZ=America/New_York date -d "$SLOT" +%s 2>/dev/null) || continue
   AGE=$((NOW_EPOCH - SLOT_EPOCH))
+  if [ -z "$NEWEST_SLOT" ] || [[ "$SLOT" > "$NEWEST_SLOT" ]]; then NEWEST_SLOT=$SLOT; NEWEST_AGE=$AGE; fi
   if [ "$AGE" -ge -300 ] && [ "$AGE" -le 3600 ] && [ "$AGE" -lt "$BEST_AGE" ]; then BEST_AGE=$AGE; CLIP_ID=$d; fi
 done
-[ -n "$CLIP_ID" ] || exit 0
+if [ -z "$CLIP_ID" ]; then echo "ig-post-staged: no eligible clip (newest staged ig_slot=${NEWEST_SLOT:-none}, age=${NEWEST_AGE:-?}s)" >&2; exit 0; fi
 
 DIR="$OUTBOX_BASE/$CLIP_ID"
 VIDEO="$(/tmp/indra.sh "ls $DIR/*.mp4 2>/dev/null | head -1")"
