@@ -1,5 +1,6 @@
 """Cutter: ffmpeg cuts clips around spikes, makes them vertical 9:16,
-captions them with Whisper (CPU), burns captions + a clipsdaily credit in.
+transcribes them with faster-whisper (CPU), burns a hook + a clipsdaily
+credit in.
 
 Two lengths:
   - 30s (Shorts / Reels): window starts 20s BEFORE the spike and ends
@@ -18,8 +19,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from .paths import runtime_home
-HERE = runtime_home()
+HERE = Path(__file__).resolve().parent
 
 TIKTOK_MIN_SECONDS = 60
 TIKTOK_TARGET_SECONDS = 75
@@ -164,6 +164,27 @@ def _wrap_hook(text, max_len=18):
     return lines[:2]
 
 
+def _transcribe(video, model):
+    """Transcribe with faster-whisper, returning an openai-whisper-shaped
+    result dict: {"segments": [{"start", "end", "text", "words":
+    [{"word", "start", "end"}]}]}. Model is the config name (e.g.
+    "base"), run on CPU with int8 compute (fastest on CPU, same
+    accuracy class as openai-whisper; ~4x faster, no torch needed).
+    faster-whisper's transcribe() returns a segment generator, so it
+    is consumed into a list here. Switched Nov 16, 2026 — the note
+    taker already uses faster-whisper."""
+    from faster_whisper import WhisperModel
+    m = WhisperModel(model, device="cpu", compute_type="int8")
+    segments, _info = m.transcribe(str(video), word_timestamps=True)
+    out = []
+    for seg in segments:
+        words = [{"word": w.word, "start": w.start, "end": w.end}
+                 for w in (seg.words or [])]
+        out.append({"start": seg.start, "end": seg.end,
+                    "text": seg.text, "words": words})
+    return {"segments": out}
+
+
 def _caption_and_burn(video, stem, channel, model, out_dir,
                           hook=None, spike_at=20):
     # Burn the credit + one big hook overlay into a finished clip.
@@ -179,9 +200,10 @@ def _caption_and_burn(video, stem, channel, model, out_dir,
         # No hook supplied: transcribe internally (Whisper runs here
         # ONLY to know what was said — nothing is burned as captions),
         # write the SRT for queue titles/debugging, derive the hook.
-        import whisper
-        m = whisper.load_model(model)
-        result = m.transcribe(str(video), fp16=False, word_timestamps=True)
+        # faster-whisper (Nov 16, 2026 — replaces openai-whisper).
+        # _transcribe returns the same result shape the chunking +
+        # hook code below expects, so nothing else changes.
+        result = _transcribe(str(video), model)
         chunks = []
         cur_words, cur_start, cur_end = [], None, None
         for seg in result["segments"]:
