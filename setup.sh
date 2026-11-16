@@ -62,5 +62,24 @@ chmod 700 .auth
 
 echo "== done =="
 echo "Next: docs/AUTH.md (YouTube OAuth, TikTok cookies, Instagram),"
-echo "then: python3 poster.py --check   (read-only, posts nothing)"
-echo "then: tmux new -s clipsdaily && python3 runner.py"
+echo "then: clipsdaily auth check   (read-only, posts nothing)"
+echo "then: tmux new -s clipsdaily && clipsdaily run"
+
+# == clipsdaily CLI (editable install from this repo) ==
+# Added Nov 2026 (packaging pass): installs the `clipsdaily` console
+# script from this repo so `clipsdaily run`, `clipsdaily queue status`,
+# etc. work. The heavy deps above (ffmpeg, whisper, posters) are
+# installed by the earlier steps; --no-deps keeps this fast.
+# pip >= 23 is required: Debian's pip 22.0.2 cannot build a PEP 621
+# pyproject (its editable-hook check fails, its wheel builds as UNKNOWN).
+PIP_MAJOR="$(python3 -m pip --version 2>/dev/null | sed -E 's/^pip ([0-9]+)\..*/\1/')"
+if [ -n "$PIP_MAJOR" ] && [ "$PIP_MAJOR" -lt 23 ]; then
+  echo "pip is too old ($PIP_MAJOR) — upgrading pip in the user site"
+  python3 -m pip install --user -q -U pip
+fi
+python3 -m pip install --user -e . --no-deps || echo "WARN: editable install failed — run 'python3 -m pip install --user -e .' manually"
+if command -v clipsdaily >/dev/null 2>&1; then
+  echo "clipsdaily: $(clipsdaily --version)"
+else
+  echo "clipsdaily not on PATH yet — add ~/.local/bin to PATH or open a new shell"
+fi

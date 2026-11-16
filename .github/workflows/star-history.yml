@@ -1,0 +1,35 @@
+name: Star History
+
+# Daily refresh of the Star History chart snippet in README.md.
+# The chart is served live by star-history.com, so this is usually a
+# no-op; it exists so the snippet stays current if the format changes.
+on:
+  schedule:
+    - cron: "0 12 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  star-history:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Regenerate star history snippet
+        run: python3 scripts/gen_star_history.py
+      - name: Commit if changed
+        run: |
+          if git diff --quiet README.md; then
+            echo "star history snippet unchanged"
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add README.md
+            git commit -m "docs: refresh star history chart"
+            git push
+          fi

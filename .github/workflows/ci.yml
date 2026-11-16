@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Compile all Python
+        run: python -m compileall -q src
+
+      - name: Check shell scripts parse
+        run: |
+          bash -n deploy.sh
+          bash -n setup.sh
+          bash -n install.sh
+          bash -n test_e2e.sh
+          bash -n scripts/submit_cron.sh
+          bash -n scripts/submit_mark.sh
+          bash -n scripts/ig-post-staged.sh
+          bash -n scripts/check-secrets.sh
+          bash -n scripts/gen-cli-reference.sh
+
+      - name: Check VERSION matches package
+        run: make check
+
+      - name: Secret scan
+        run: bash scripts/check-secrets.sh
+
+      - name: Install package (no heavy deps)
+        run: pip install --no-deps -e .
+
+      - name: CLI smoke test
+        run: |
+          clipsdaily --help
+          clipsdaily --version
+          clipsdaily run --help
+          clipsdaily post --help
+          clipsdaily post now --help
+          clipsdaily post one --help
+          clipsdaily post hourly --help
+          clipsdaily queue --help
+          clipsdaily queue status --help
+          clipsdaily queue maintain --help
+          clipsdaily queue seed --help
+          clipsdaily campaign --help
+          clipsdaily campaign watch --help
+          clipsdaily campaign cut --help
+          clipsdaily submit --help
+          clipsdaily submit scan --help
+          clipsdaily submit list-pending --help
+          clipsdaily earnings --help
+          clipsdaily auth --help
+          python -m clipsdaily --help
+
+      - name: Plugin + skill files are valid
+        run: |
+          python -c "import json; json.load(open('.claude-plugin/marketplace.json')); json.load(open('plugins/clipsdaily/.claude-plugin/plugin.json'))"
+          test -f skills/clipsdaily/SKILL.md
+          test -f docs/adr/README.md
+          # The skill bundled in the plugin must match the canonical copy.
+          diff -q skills/clipsdaily/SKILL.md plugins/clipsdaily/skills/clipsdaily/SKILL.md

@@ -43,7 +43,7 @@ watcher reconciles next run (joined / needs_review).
 Vyro has no public campaign data (homepage embeds none) — consumed
 from a parent browser dump `vyro_dump.json` when present, else skipped.
 
-Run: `python3 campaign_watcher.py --check` (daily cron, indra).
+Run: `clipsdaily campaign watch --check` (daily cron, indra).
 Dry-run: `--dry-run` (fetch + evaluate, write nothing).
 Logs: `campaigns.log`. State: `campaigns.json`, `join_requests.json`,
 `join_results.json` (parent-written).
@@ -60,7 +60,7 @@ and writes nothing. Reuses vod.py/chat.py/cutter.py — no duplication.
 The TikTok variant is cut from the same window (70-90s); the 30s is
 the YT/IG file.
 
-Run: `python3 campaign_cut.py --campaign <id> [--dry-run] [--max-clips N]`.
+Run: `clipsdaily campaign cut --campaign <id> [--dry-run] [--max-clips N]`.
 Logs: `campaign_cut.log`.
 
 ### 3. eligibility_gate.py (HARD GATE — runs before queueing AND before submitting)
@@ -85,7 +85,7 @@ never submitted, logged for human review. Borderline = blocked.
   both ground truths.)
 - Exit 0 = PASS, 2 = BLOCKED (JSON verdict on stdout).
 
-Run: `python3 eligibility_gate.py --clip <entry.json> --campaign <id>`.
+Run: `python -m clipsdaily.eligibility_gate --clip <entry.json> --campaign <id>`.
 
 ### 4. auto_submit.py + submit-outbox/
 Outbox writer for the parent cron. `--scan` reads queue.json +
@@ -116,7 +116,7 @@ Status normalized pending/approved/rejected. Payout for approved
 clips comes from the dump, else estimated views/1000 x rate.
 Pending = projected, never realized.
 
-Run daily: `python3 earnings.py --update && python3 earnings.py --summary`.
+Run daily: `clipsdaily earnings --update && clipsdaily earnings --summary`.
 
 ## Dry-run test results (Nov 15, 2026, all dry-run, no real join/post/submit)
 

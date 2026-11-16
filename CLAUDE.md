@@ -55,7 +55,7 @@ explicit go from Abel, and never touch the live dir.
    or chat. Auth is recreated per `docs/AUTH.md`.
 10. **Never run `restart_maintainer.py`.** It is a stale one-off
     that wipes `queue.json` and resets maintainer state.
-    Restart the maintainer with tmux (see `docs/OPERATIONS.md`).
+    Restart the maintainer with tmux (see `docs/operations.md`).
 11. **Long ffmpeg jobs run detached** (nohup/tmux), never over a
     bare SSH pipe — the pipe breaks and kills the burn.
 12. **One-strike rule:** a single bad Content Rewards submission
@@ -68,10 +68,10 @@ explicit go from Abel, and never touch the live dir.
 bash setup.sh                    # deps + runtime dirs
 cp config/config.yaml.example config.yaml
 # campaigns.json starts empty: {"campaigns": {}} — the watcher fills it
-python3 poster.py --check        # read-only auth check, posts nothing
-tmux new -s clipsdaily && python3 runner.py        # live loop
-tmux new -s clipsdaily-queue && python3 queue_seed.py --maintain
-tmux new -s clipsdaily-hourly && python3 hourly_poster.py
+clipsdaily auth check        # read-only auth check, posts nothing
+tmux new -s clipsdaily && clipsdaily run        # live loop
+tmux new -s clipsdaily-queue && clipsdaily queue maintain
+tmux new -s clipsdaily-hourly && clipsdaily post hourly
 ```
 
 Cadence: 2 clips/hour, slots :00 and :30 (YouTube + TikTok from

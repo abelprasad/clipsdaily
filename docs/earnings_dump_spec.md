@@ -24,7 +24,7 @@ and records every submission row, then writes this file to indra at
   Rejected. views and payout_cents are the dashboard numbers (0 when
   the dashboard shows none yet). submission_id is the dashboard's ID
   for the submission (match by clip_url when the ID is not shown).
-- Then run on indra: `python3 /home/abel/clipsdaily/earnings.py --update`
+- Then run on indra: `/home/abel/.local/bin/clipsdaily earnings --update`
   and report the one-line summary it prints.
 
 ## vyro_dump.json — Vyro campaigns (no public data to fetch)

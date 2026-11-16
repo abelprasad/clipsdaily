@@ -1,0 +1,37 @@
+---
+description: Standing rules for the clipsdaily clip pipeline (full frame, one-line captions, strict gate, TikTok blocked)
+globs:
+  - "src/clipsdaily/**/*.py"
+  - "docs/**/*.md"
+alwaysApply: false
+---
+
+# clipsdaily — standing rules
+
+This checkout is the clipsdaily pipeline (record live streams, cut vertical clips, post to YouTube Shorts / TikTok / Instagram Reels, submit to clipping campaigns).
+
+## Never break these
+
+- **Full frame, no cropping.** Every clip shows the whole 16:9 source frame on a 1080x1920 canvas, blurred darkened copy behind it.
+- **One-line post captions, no boilerplate, no hashtags** except ones a campaign requires (`#IShowSpeed`).
+- **No burned-in word captions.** One big hook overlay at the start only (~3s), hook at y=300.
+- **Strict eligibility gate.** `eligibility_gate.py` must PASS before any campaign clip posts or submits. Borderline = blocked.
+- **Never submit a clip twice, or past 30 minutes after posting.**
+- **Credit the streamer** in every post.
+- **Clipsdaily accounts only.** Never point this at a personal account.
+- **TikTok auto-posting is blocked** (throttled session + Playwright sync/async bug). Do not retry repeatedly; retries deepen the throttle.
+
+## Commands
+
+```bash
+clipsdaily run            # live runner
+clipsdaily post now       # post next pending clip
+clipsdaily queue status   # queue health
+clipsdaily campaign watch --check
+clipsdaily submit scan
+clipsdaily earnings
+```
+
+## Repo vs live
+
+This repo is the dev copy. The live runtime is `/home/abel/clipsdaily` on indra. Never edit the live dir by hand; deploy with `bash deploy.sh`. Never run `restart_maintainer.py` (it wipes `queue.json`).

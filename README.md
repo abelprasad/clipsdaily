@@ -2,6 +2,14 @@
 
 ![clipsdaily logo](assets/clipsdaily-logo.jpg)
 
+**59 pipeline modules · 7 CLI commands · 7 slash commands · 3 platforms · 2 clips/hour · 15 ADRs**
+
+**Built by [Abel Prasad](https://www.linkedin.com/in/abel-prasad)** · [abelprasad.dev](https://abelprasad.dev)
+
+<!-- STAR-HISTORY:START -->
+[![Star History Chart](https://api.star-history.com/svg?repos=abelprasad/clipsdaily&type=Date)](https://star-history.com/#abelprasad/clipsdaily&Date)
+<!-- STAR-HISTORY:END -->
+
 Fully automatic clip pipeline for Twitch, Kick, and YouTube Live.
 It records live streams, finds the moments chat erupts, cuts
 30-second vertical clips, and posts them to YouTube Shorts,
@@ -20,6 +28,28 @@ bans the account from every campaign permanently.
 > Nothing in this repo posts, joins, or submits anything until
 > you configure auth and flip a platform on.
 
+## Scope
+
+Deliberate design decisions, not gaps.
+
+### In scope
+
+- Fully automatic live clipping: record, find chat spikes, cut, post — no review queue.
+- Three destinations: YouTube Shorts (30s), TikTok (60–90s), Instagram Reels (30s).
+- Campaign discovery + gated cutting + timed submission (Content Rewards).
+- Full-frame vertical video, one-line captions, one big hook at the start.
+- Kill switch + daily cap + disk guard + cleanup.
+- A CLI, a Claude Code plugin, and a skill — so the pipeline is operable by a human, by Claude Code, or by a cron.
+
+### Out of scope
+
+- Review queues or per-clip approval — the pipeline is automatic by design.
+- Paying to join any clipping platform — never.
+- Posting to personal accounts — the clipsdaily accounts only.
+- Live-money anything beyond campaigns — no trading, no gambling, no paid ads.
+- YouTube VOD mode — paused, not built (design in `docs/youtube-vod-notes.md`).
+- Rewriting the pipeline — the CLI is a thin entry layer over the existing modules.
+
 ## What it is
 
 | Question | Answer |
@@ -35,15 +65,20 @@ bans the account from every campaign permanently.
 ## Quickstart
 
 ```bash
-git clone <this-repo> clipsdaily
-cd clipsdaily
+# 1. Install the CLI (once the repo is pushed):
+pipx install git+https://github.com/abelprasad/clipsdaily
+# — or from a clone: git clone <repo> clipsdaily && cd clipsdaily && bash install.sh --local
+
+# 2. System deps + config (from a clone):
 bash setup.sh            # deps: ffmpeg, streamlink, whisper, posters
 cp config/config.yaml.example config.yaml
 cp config/campaigns.example.json campaigns.json   # starts empty; watcher fills it
 # Auth: see docs/AUTH.md (YouTube OAuth, TikTok cookies, Instagram)
-python3 poster.py --check        # read-only, posts nothing
+clipsdaily auth check        # read-only, posts nothing
+
+# 3. Run (from the runtime home):
 tmux new -s clipsdaily
-python3 runner.py                # live recorder + poster
+clipsdaily run               # live recorder + poster
 # Ctrl-B then D to detach
 ```
 
@@ -52,10 +87,17 @@ Start the other two sessions too (see
 
 ```bash
 tmux new -s clipsdaily-queue
-python3 queue_seed.py --maintain   # VOD-seeded hourly queue
+clipsdaily queue maintain   # VOD-seeded hourly queue
 
 tmux new -s clipsdaily-hourly
-python3 hourly_poster.py           # 2 clips/hour poster
+clipsdaily post hourly      # 2 clips/hour poster
+```
+
+Claude Code plugin — see [INSTALL.md](INSTALL.md):
+
+```
+/plugin marketplace add abelprasad/clipsdaily
+/plugin install clipsdaily@abelprasad
 ```
 
 ## Architecture
@@ -153,9 +195,9 @@ on CPU is the bottleneck, ~1 min per 30s clip). Edit
 
 | Session | Command | What it does |
 |---|---|---|
-| `clipsdaily` | `python3 runner.py` | Live loop: records live streams, detects spikes, cuts, posts via `poster.py`. |
-| `clipsdaily-queue` | `python3 queue_seed.py --maintain` | Maintainer: seeds the hourly queue from recent VODs, cuts 30s + TikTok variants. Target 24 pending. |
-| `clipsdaily-hourly` | `python3 hourly_poster.py` | Posts 2 clips/hour at :00 and :30 (YouTube + TikTok), stages Instagram to `ig-outbox/`. |
+| `clipsdaily` | `clipsdaily run` | Live loop: records live streams, detects spikes, cuts, posts via `poster.py`. |
+| `clipsdaily-queue` | `clipsdaily queue maintain` | Maintainer: seeds the hourly queue from recent VODs, cuts 30s + TikTok variants. Target 24 pending. |
+| `clipsdaily-hourly` | `clipsdaily post hourly` | Posts 2 clips/hour at :00 and :30 (YouTube + TikTok), stages Instagram to `ig-outbox/`. |
 
 Start each in its own tmux session so it survives disconnects.
 Restart by killing the session and starting a fresh one with the
@@ -223,7 +265,7 @@ both check for the file.
   is a crash backstop).
 - Posted clips: deleted after 24h max. Unposted clips: max 48h.
 - Temp files every run; logs older than 7 days deleted.
-- Log: `logs/cleanup.log`. Manual run: `python3 cleanup.py`.
+- Log: `logs/cleanup.log`. Manual run: `python -m clipsdaily.cleanup`.
 
 ### Crons (operator machine)
 
@@ -250,7 +292,7 @@ Earnings dump format: `docs/earnings_dump_spec.md`.
 
 ```bash
 python3 vod_batch.py   # latest completed VODs, top spikes, batch cap 6
-python3 vod.py https://www.twitch.tv/videos/<id> --max-clips 5
+python -m clipsdaily.vod https://www.twitch.tv/videos/<id> --max-clips 5
 ```
 
 VOD clips are throwbacks: captions lead with
@@ -267,7 +309,7 @@ EVERY campaign permanently.** `eligibility_gate.py` checks
 window + caption + full-frame before any campaign clip is
 queued or submitted; any failure or unverifiable check =
 BLOCKED. Borderline = blocked. Never bypass it. Full rules:
-`docs/CAMPAIGNS.md`, `docs/AUTOMATION.md`.
+`docs/campaigns.md`, `docs/AUTOMATION.md`.
 
 ```mermaid
 flowchart TD
@@ -506,7 +548,7 @@ listed lines. Do not refactor working code just for this.
 | Clips cut but nothing posts | `STOP` file exists in the pipeline root | `rm STOP` to resume. |
 | Runner/maintainer ignore your code change | They hold modules in memory | Restart the affected tmux session (or `bash deploy.sh`). |
 | Whisper queue backs up, clips lag | CPU-bound (8 cores, 11 GB RAM) | Spikes are processed strongest-first by design. Do not raise concurrent recordings past 8. |
-| Disk filling up | Raw recordings or unposted clips accumulating | `python3 cleanup.py` manually; check the 50 GB disk guard in `cleanup.py`. |
+| Disk filling up | Raw recordings or unposted clips accumulating | `python -m clipsdaily.cleanup` manually; check the 50 GB disk guard in `cleanup.py`. |
 | `poster.py --check` reports a platform NOT READY | Auth missing or expired for that platform | Recreate auth per `docs/AUTH.md`; TikTok needs a fresh cookie export when a post fails on auth. |
 | Queue stuck on a `partial` entry | A platform failed and retries are exhausted | The entry moves on (max 2 retries). Check `logs/hourly-<date>.log` for the failure reason; do not hand-edit `queue.json` while the maintainer runs. |
 
@@ -518,7 +560,7 @@ listed lines. Do not refactor working code just for this.
 | `deploy.sh` | Deploys this repo to the live dir: backup, copy `.py`, restart tmux. `--dry-run` prints the plan and changes nothing. |
 | `config/` | `config.yaml.example`, `campaigns.example.json` (templates; copy to `config.yaml` / `campaigns.json`) |
 | `scripts/` | Operator-machine helpers: `ig-post-staged.sh` (Instagram cron), `submit_cron.sh`, `submit_mark.sh` |
-| `docs/` | `adr/` (architecture decision log, `adr/README.md` is the index), `AUTOMATION.md`, `CAPTIONS.md`, `CAMPAIGNS.md`, `TIKTOK.md`, `AUTH.md`, `OPERATIONS.md`, `PATHS.md`, `SUBMIT_CRON_BODY.md`, `earnings_dump_spec.md`, `youtube-vod-notes.md` |
+| `docs/` | `adr/` (architecture decision log, `adr/README.md` is the index), `AUTOMATION.md`, `CAPTIONS.md`, `campaigns.md`, `TIKTOK.md`, `AUTH.md`, `operations.md`, `PATHS.md`, `SUBMIT_CRON_BODY.md`, `earnings_dump_spec.md`, `youtube-vod-notes.md` |
 | `skills/` | `motion-design/` (vendored, MIT) + install notes for `ffmpeg-skill` and `video-editing` |
 | `assets/` | `clipsdaily-logo.jpg` (brand logo) |
 

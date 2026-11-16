@@ -42,12 +42,12 @@ an explicit go. Never touch the live dir.
 ```bash
 bash setup.sh
 cp config/config.yaml.example config.yaml
-python3 poster.py --check
-tmux new -s clipsdaily && python3 runner.py
-tmux new -s clipsdaily-queue && python3 queue_seed.py --maintain
-tmux new -s clipsdaily-hourly && python3 hourly_poster.py
+clipsdaily auth check
+tmux new -s clipsdaily && clipsdaily run
+tmux new -s clipsdaily-queue && clipsdaily queue maintain
+tmux new -s clipsdaily-hourly && clipsdaily post hourly
 ```
 
 Kill switch: `touch STOP`. Daily cap 20. Disk guard 50 GB.
-Docs: `docs/` (`CAPTIONS.md`, `CAMPAIGNS.md`, `TIKTOK.md`,
-`AUTH.md`, `OPERATIONS.md`, `PATHS.md`, `AUTOMATION.md`).
+Docs: `docs/` (`CAPTIONS.md`, `campaigns.md`, `TIKTOK.md`,
+`AUTH.md`, `operations.md`, `PATHS.md`, `AUTOMATION.md`).

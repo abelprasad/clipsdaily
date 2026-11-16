@@ -20,6 +20,6 @@ EOF
   chmod 700 "$INDRA"
 fi
 echo "=== auto_submit --scan (indra) ==="
-"$INDRA" 'sudo -n -u abel python3 /home/abel/clipsdaily/auto_submit.py --scan'
+"$INDRA" 'sudo -n -u abel /home/abel/.local/bin/clipsdaily submit scan'
 echo "=== pending submit jobs ==="
-"$INDRA" 'sudo -n -u abel python3 /home/abel/clipsdaily/auto_submit.py --list-pending'
+"$INDRA" 'sudo -n -u abel /home/abel/.local/bin/clipsdaily submit list-pending'

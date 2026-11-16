@@ -8,7 +8,7 @@ without at least one platform wired.
 Check status any time (read-only, posts nothing):
 
 ```bash
-python3 poster.py --check
+clipsdaily auth check
 ```
 
 ## Files in .auth/

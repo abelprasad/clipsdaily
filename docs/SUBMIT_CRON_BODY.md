@@ -27,7 +27,7 @@ jobs, and prints pending submit jobs as JSON.
 4. Silent when there is nothing pending (no message needed).
 
 ## Campaign watcher cron (daily, America/New_York)
-Run on indra: `python3 /home/abel/clipsdaily/campaign_watcher.py --check`
+Run on indra: `/home/abel/.local/bin/clipsdaily campaign watch --check`
 via /tmp/indra.sh as abel. It discovers campaigns, evaluates join
 rules, and writes join_requests.json. The parent then runs ONE browser
 task per requested join: open the campaign URL, click Join Campaign,
@@ -39,5 +39,5 @@ indra ({"campaign_id": ..., "status": "joined"|"failed",
 Run a browser task on the Content Rewards submissions dashboard as
 Clips Daily, dump the submissions table to earnings_dump.json on indra
 (see earnings_dump_spec.md), then run on indra:
-`python3 /home/abel/clipsdaily/earnings.py --update`
+`/home/abel/.local/bin/clipsdaily earnings --update`
 and report the one-line summary.

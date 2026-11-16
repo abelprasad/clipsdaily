@@ -1,3 +1,6 @@
+# DEPRECATED (Nov 2026): one-time bootstrap for the flat-script layout.
+# The repo is now a package (src/clipsdaily/ + pyproject.toml).
+# Do NOT re-run. Use setup.sh (install) / deploy.sh (deploy).
 #!/bin/bash
 # Assemble the clipsdaily repo on indra. Run as abel.
 # Copies (never moves, never edits) the live pipeline code into

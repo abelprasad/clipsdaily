@@ -1,0 +1,10 @@
+{
+  "author": {
+    "email": "abelprasad4@gmail.com",
+    "name": "Abel Prasad"
+  },
+  "description": "Fully automatic stream clip pipeline: record, cut, post. Slash commands for run, post, queue, campaign, submit, earnings, and status.",
+  "name": "clipsdaily",
+  "version": "0.1.0",
+  "icon": ".claude-plugin/icon.jpg"
+}

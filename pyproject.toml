@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "clipsdaily"
+dynamic = ["version"]
+description = "Fully automatic Twitch/Kick/YouTube Live clip pipeline: record, cut, post."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [{name = "Abel Prasad", email = "abelprasad4@gmail.com"}]
+keywords = ["clips", "twitch", "kick", "youtube", "tiktok", "shorts"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "streamlink==8.6.3",
+    "openai-whisper",
+    "instagrapi==3.1.0",
+    "tiktok-uploader==1.2.0",
+    "google-api-python-client==2.196.0",
+    "google-auth-oauthlib",
+    "pyyaml",
+    "requests",
+    "playwright",
+    "gtts",
+]
+
+[project.scripts]
+clipsdaily = "clipsdaily.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/abelprasad/clipsdaily"
+Repository = "https://github.com/abelprasad/clipsdaily"
+Issues = "https://github.com/abelprasad/clipsdaily/issues"
+
+[tool.setuptools.dynamic]
+version = {attr = "clipsdaily.__version__"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
