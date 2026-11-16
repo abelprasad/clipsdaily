@@ -232,6 +232,36 @@ def main():
         ap.add_argument("--caption", default="")
         ap.add_argument("--label", default="clip")
         args = ap.parse_args()
+        # Tee all output to a per-post log: the parent only sees the
+        # TT_RESULT_JSON line, so without this a failed post (e.g. the
+        # "Something went wrong" Studio error, Nov 16 10:03) leaves no
+        # trace of what the browser actually did.
+        _logpath = Path("/home/abel/clipsdaily/logs") / (
+            "tt_%s_%s.log" % (args.label, time.strftime("%Y%m%d_%H%M%S")))
+        _logpath.parent.mkdir(parents=True, exist_ok=True)
+        _logf = open(_logpath, "a")
+
+        class _Tee:
+            def __init__(self, *streams):
+                self.streams = streams
+
+            def write(self, data):
+                for s in self.streams:
+                    try:
+                        s.write(data)
+                    except Exception:
+                        pass
+
+            def flush(self):
+                for s in self.streams:
+                    try:
+                        s.flush()
+                    except Exception:
+                        pass
+
+        sys.stdout = _Tee(sys.stdout, _logf)
+        sys.stderr = _Tee(sys.stderr, _logf)
+        print("child log: %s" % _logpath, flush=True)
         ok, url, detail = post_file(args.file, args.caption, label=args.label)
         print("TT_RESULT_JSON " + json.dumps(
             {"ok": ok, "url": url, "detail": detail}), flush=True)
