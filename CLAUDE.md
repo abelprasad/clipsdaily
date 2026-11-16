@@ -81,6 +81,16 @@ on indra). Queue targets: seed 24 pending, keep cutting when
 pending drops below 12. Daily cap 20 clips. Kill switch: `touch
 STOP` in the repo root pauses all posting.
 
+## Deploy
+
+This repo is the canonical dev copy (decided Nov 15, 2026).
+Ship changes with `bash deploy.sh`: `--dry-run` first (prints
+the plan, changes nothing), then a live deploy as abel
+(`sudo -n -u abel bash deploy.sh`). It backs up the live `.py`
+files, copies the repo's `*.py`, and restarts the three tmux
+sessions. Never edit `/home/abel/clipsdaily/` by hand — the next
+deploy overwrites it. See README.md "Dev workflow".
+
 ## File map
 
 - Core runtime: `runner.py`, `recorder.py`, `chat.py`,
