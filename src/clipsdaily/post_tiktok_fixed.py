@@ -13,12 +13,12 @@ Usage: python3 post_tiktok_fixed.py japan|hongkong|both
 Posts NOTHING to any other platform. Verifies each post on the profile.
 """
 import json, sys, time
+sys.path.insert(0, "/home/abel/clipsdaily")
 from pathlib import Path
-from .paths import runtime_home
 from tiktok_uploader.upload import TikTokUploader
 import tiktok_uploader.upload as up
 
-COOKIES = str(runtime_home() / ".auth" / "tiktok_cookies.txt")
+COOKIES = "/home/abel/clipsdaily/.auth/tiktok_cookies.txt"
 CLIPS = {
     "japan": ("/home/abel/clipsdaily/clips/speed-expedia-japan_tiktok70s.mp4",
               "IShowSpeed gives Hudson a trip to Japan with Expedia #IShowSpeed"),
@@ -185,7 +185,57 @@ def post_file(clip, caption, label="clip"):
         u.close()
 
 
+def post_file_subprocess(clip, caption, label="clip"):
+    """Post ONE file in a FRESH subprocess. Returns (ok, url, detail).
+
+    Why a subprocess: tiktok-uploader's sync Playwright session leaks
+    its event loop into the calling process — TikTokUploader.close()
+    closes the browser but never stops the Playwright context manager,
+    so the loop is still running afterwards (verified Nov 16, 2026:
+    asyncio.get_running_loop() succeeds right after u.close()). The
+    NEXT sync_playwright().start() in the same process then raises
+    "using Playwright Sync API inside the asyncio loop". A fresh
+    process per post has no leftover loop, so it cannot hit that error.
+    This is what broke every TikTok attempt in the long-lived hourly
+    poster (and runner) from Nov 15 22:00 on, while one-shot scripts
+    kept working.
+    """
+    import subprocess
+    cmd = [sys.executable, str(Path(__file__).resolve()),
+           "--file", str(clip), "--caption", caption, "--label", label]
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=420)
+    except subprocess.TimeoutExpired:
+        return False, None, "tiktok subprocess timed out after 420s"
+    except Exception as e:
+        return False, None, "tiktok subprocess failed to start: %s" % e
+    for line in reversed(proc.stdout.splitlines()):
+        if line.startswith("TT_RESULT_JSON "):
+            try:
+                res = json.loads(line[len("TT_RESULT_JSON "):])
+                return bool(res.get("ok")), res.get("url"), res.get("detail", "")
+            except Exception:
+                pass
+    tail = (proc.stdout + proc.stderr)[-500:]
+    return False, None, "tiktok subprocess exit=%s, no result line: %s" % (
+        proc.returncode, tail)
+
+
 def main():
+    if len(sys.argv) >= 2 and sys.argv[1] == "--file":
+        # One-clip mode for the hourly poster / runner: post a single
+        # file in THIS process and print one machine-readable result
+        # line for the parent to parse. Exit 0 only on verified post.
+        import argparse
+        ap = argparse.ArgumentParser()
+        ap.add_argument("--file", required=True)
+        ap.add_argument("--caption", default="")
+        ap.add_argument("--label", default="clip")
+        args = ap.parse_args()
+        ok, url, detail = post_file(args.file, args.caption, label=args.label)
+        print("TT_RESULT_JSON " + json.dumps(
+            {"ok": ok, "url": url, "detail": detail}), flush=True)
+        sys.exit(0 if ok else 1)
     which = sys.argv[1] if len(sys.argv) > 1 else "both"
     labels = ["japan", "hongkong"] if which == "both" else [which]
     u = TikTokUploader(cookies=COOKIES, browser="chromium", headless=True)

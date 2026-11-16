@@ -32,8 +32,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from .paths import runtime_home
-HERE = runtime_home()
+HERE = Path(__file__).resolve().parent
 AUTH_DIR = HERE / ".auth"
 
 TIKTOK_MIN_SECONDS = 60
@@ -268,8 +267,11 @@ def post_tiktok(clip, channel, config, platform="twitch", caption=None):
     # post_tiktok_fixed dismisses the modal, removes the overlays,
     # JS-clicks the Post button, and verifies via Studio. Returns the
     # verified video URL or raises.
-    from .post_tiktok_fixed import post_file
-    ok, url, detail = post_file(str(clip), caption, label=channel)
+    # Subprocess (Nov 16, 2026): the in-process uploader leaks its
+    # Playwright event loop (see post_file_subprocess), which breaks
+    # every later TikTok post in this long-lived process.
+    from post_tiktok_fixed import post_file_subprocess
+    ok, url, detail = post_file_subprocess(str(clip), caption, label=channel)
     if not ok or not url:
         raise RuntimeError(f"TikTok post failed/not verified: {detail}")
     print(f"[poster] tiktok posted {url}", flush=True)

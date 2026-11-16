@@ -1,11 +1,21 @@
-"""Half-hour poster for clipsdaily: one clip to YouTube + TikTok
-(+ staged Instagram) at :00 and :30 every hour, from queue/queue.json.
+"""Half-hour poster for clipsdaily: one clip to TikTok (+ staged
+Instagram) at :00 and :30 every hour, and to YouTube on 8 slots/day
+only (:00 of 00, 03, 06, 09, 12, 15, 18, 21), from queue/queue.json.
 
 Runs in tmux `clipsdaily-hourly`. Takes the next pending entry, stages
 the Instagram outbox first, posts YouTube Shorts (30s) and TikTok
 (60-90s variant, or the 30s as a fallback per Abel's hourly order),
 verifies EACH post is actually live before marking it posted, and
 logs everything to logs/hourly-YYYYMMDD.log.
+
+YouTube 8/day (Nov 16, 2026): the channel hit YouTube's daily upload
+limit at 9 posts on Nov 15, so 2/hour (48/day) re-hits the limit
+within hours. A YouTube uploadLimitExceeded never burns a retry.
+Instagram meta rule: ig-outbox/meta.json status is IG state only —
+"staged" until the IG cron posts it, "posted" after — YouTube/TikTok
+outcomes must never flip it (that bug silently killed the IG leg on
+Nov 16: failed YT/TT slots wrote "failed"/"pending" into the meta and
+the IG cron only posts "staged").
 
 Safety: never posts the same clip twice (status transitions in
 queue.json); never posts while /home/abel/clipsdaily/STOP exists (same
@@ -22,9 +32,9 @@ import time
 from datetime import datetime, timedelta
 from pathlib import Path
 
+sys.path.insert(0, "/home/abel/clipsdaily")
 
-from .paths import runtime_home
-HERE = runtime_home()
+HERE = Path("/home/abel/clipsdaily")
 QUEUE_DIR = HERE / "queue"
 QUEUE_FILE = QUEUE_DIR / "queue.json"
 OUTBOX = HERE / "ig-outbox"
@@ -32,6 +42,7 @@ STOP_FILE = HERE / "STOP"
 LOGS = HERE / "logs"
 CONFIG = {"platforms": {"youtube": True, "tiktok": True, "instagram": False}}
 MAX_RETRIES = 2
+YT_HOURS = {0, 3, 6, 9, 12, 15, 18, 21}  # YouTube slots: 8/day
 
 
 def log(msg):
@@ -69,10 +80,19 @@ def next_slot():
             + timedelta(hours=1))
 
 
+def is_youtube_slot(hour_label):
+    """True only on YouTube slots: :00 of 00, 03, 06, 09, 12, 15, 18,
+    21 (8/day). hour_label looks like "2026-11-16T09:00"."""
+    try:
+        return hour_label[14:16] == "00" and int(hour_label[11:13]) in YT_HOURS
+    except Exception:
+        return False
+
+
 def verify_youtube(vid):
     """Confirm a YouTube video id exists and is public."""
     try:
-        from .poster import _yt_service
+        from poster import _yt_service
         yt = _yt_service()
         resp = yt.videos().list(part="status,snippet", id=vid).execute()
         items = resp.get("items", [])
@@ -107,6 +127,16 @@ def stage_instagram(entry, hour_label):
         "tiktok_url": entry.get("tt_url"),
         "status": "staged",
     }
+    # Never un-stage a clip Instagram already posted: the IG cron flips
+    # meta to "posted" (and writes .posted); a retry re-staging the same
+    # clip must keep it "posted" or IG would post it twice.
+    try:
+        old = json.loads((out / "meta.json").read_text())
+        ig_done = (out / ".posted").exists() or old.get("status") == "posted"
+    except Exception:
+        ig_done = (out / ".posted").exists()
+    if ig_done:
+        meta["status"] = "posted"
     (out / "meta.json").write_text(json.dumps(meta, indent=2))
     return out
 
@@ -119,18 +149,28 @@ def update_outbox_meta(entry):
         meta = json.loads(out.read_text())
     except Exception:
         meta = {}
+    # IG state lives in this file alone: "staged" until the IG cron
+    # posts it, "posted" after. YouTube/TikTok outcomes must never flip
+    # it — writing entry["status"] ("failed"/"pending") here is what
+    # silently killed the IG leg on Nov 16.
+    ig_done = ((OUTBOX / entry["id"] / ".posted").exists()
+               or meta.get("status") == "posted")
     meta.update({"youtube_url": entry.get("yt_url"),
                  "tiktok_url": entry.get("tt_url"),
-                 "status": entry["status"]})
+                 "status": "posted" if ig_done else "staged"})
     out.write_text(json.dumps(meta, indent=2))
 
 
 def post_entry(entry, hour_label):
     """Post missing platforms for one entry. Returns True if fully done."""
-    from .poster import post_youtube, post_tiktok
+    from poster import post_youtube, post_tiktok
     channel = entry["streamer"]
+    yt_slot = is_youtube_slot(hour_label)
     if not entry.get("yt_url"):
-        if entry.get("yt_retries", 0) >= MAX_RETRIES:
+        if not yt_slot:
+            log(f"{entry['id']}: youtube skipped (not a YouTube slot; "
+                f"next at 00/03/06/09/12/15/18/21)")
+        elif entry.get("yt_retries", 0) >= MAX_RETRIES:
             log(f"{entry['id']}: youtube retries exhausted, giving up")
             entry["yt_url"] = "FAILED"
         else:
@@ -146,9 +186,17 @@ def post_entry(entry, hour_label):
                 entry["yt_url"] = url
                 log(f"{entry['id']}: YOUTUBE LIVE {url} ({detail})")
             except Exception as e:
-                entry["yt_retries"] = entry.get("yt_retries", 0) + 1
-                log(f"{entry['id']}: youtube FAILED (try "
-                    f"{entry['yt_retries']}): {e}")
+                if "uploadLimitExceeded" in str(e):
+                    # The daily limit is a quota, not a clip failure:
+                    # do not burn a retry; try again on the next
+                    # YouTube slot.
+                    log(f"{entry['id']}: youtube LIMIT (uploadLimitExceeded) "
+                        f"— will retry next YouTube slot, retries unchanged "
+                        f"({entry.get('yt_retries', 0)})")
+                else:
+                    entry["yt_retries"] = entry.get("yt_retries", 0) + 1
+                    log(f"{entry['id']}: youtube FAILED (try "
+                        f"{entry['yt_retries']}): {e}")
     if not entry.get("tt_url"):
         if entry.get("tt_retries", 0) >= MAX_RETRIES:
             log(f"{entry['id']}: tiktok retries exhausted, giving up")
@@ -161,8 +209,10 @@ def post_entry(entry, hour_label):
                     # No 60-90s variant yet: post the 30s anyway per
                     # Abel's hourly order (earns no Creator Rewards,
                     # but keeps the hourly cadence on TikTok).
-                    from .post_tiktok_fixed import post_file
-                    ok, url, detail = post_file(
+                    # Subprocess (Nov 16, 2026): in-process TikTok
+                    # leaks its Playwright loop; see post_file_subprocess.
+                    from post_tiktok_fixed import post_file_subprocess
+                    ok, url, detail = post_file_subprocess(
                         str(tt_file), entry["caption_tiktok"],
                         label=entry["id"])
                     if not ok or not url:
@@ -223,9 +273,18 @@ def main():
             log("queue empty at %s — nothing to post" % hour_label)
             time.sleep(60)
             continue
-        entry = pending[0]
-        log("posting %s at %s (streamer %s)"
-            % (entry["id"], hour_label, entry["streamer"]))
+        yt_slot = is_youtube_slot(hour_label)
+        if yt_slot:
+            entry = pending[0]
+        else:
+            # Non-YouTube slots keep TikTok/IG at 2/hour: take the first
+            # entry that still needs a TikTok post, instead of sitting
+            # behind an entry that is only waiting on its YouTube slot.
+            need_tt = [e for e in pending if not e.get("tt_url")]
+            entry = need_tt[0] if need_tt else pending[0]
+        log("posting %s at %s (streamer %s)%s"
+            % (entry["id"], hour_label, entry["streamer"],
+               "" if yt_slot else " [non-YouTube slot]"))
         try:
             stage_instagram(entry, hour_label)
             log(f"{entry['id']}: instagram staged in ig-outbox/")
