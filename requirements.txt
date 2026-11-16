@@ -1,0 +1,12 @@
+# Pinned where the live pipeline's versions are known; the rest float.
+streamlink==8.6.3
+openai-whisper
+instagrapi==3.1.0
+tiktok-uploader==1.2.0
+google-api-python-client==2.196.0
+google-auth-oauthlib
+pyyaml
+requests
+playwright
+# gtts is only used by make_speech.py (one-off dev tool, not the runtime).
+gtts

@@ -1,0 +1,51 @@
+# clipsdaily config — copy to config.yaml and edit.
+# Watchlist from Nov 15, 2026 (top-live sweep, English, clip-worthy).
+# Capacity: 8 concurrent recordings (8 cores, 11 GB RAM; Whisper on
+# CPU is the bottleneck, ~1 min per 30s clip). Do NOT exceed 8 on
+# launch day: more risks Whisper queue lag and disk fill. xqc is
+# watched on BOTH Twitch and Kick; the per-streamer cooldown is
+# shared, so the same moment never produces two clips.
+streamers:
+  - platform: twitch
+    channel: kaicenat
+  - platform: twitch
+    channel: ishowspeed
+  - platform: kick
+    channel: xqc
+  - platform: kick
+    channel: adinross
+  - platform: twitch
+    channel: sykkuno
+  - platform: twitch
+    channel: jynxzi
+  - platform: twitch
+    channel: stableronaldo
+  - platform: twitch
+    channel: zackrawrr
+  - platform: twitch
+    channel: hasanabi
+  - platform: twitch
+    channel: clix
+
+clip_length_seconds: 30
+spike_threshold_multiplier: 3.0
+spike_min_messages: 20          # per 10s window, floor before a spike counts
+spike_window_seconds: 10
+spike_cooldown_seconds: 300     # max 1 clip per streamer per 5 min
+max_clips_per_day: 20
+
+record_quality: best            # streamlink quality, 1080p60 when available
+recording_retention_hours: 48
+whisper_model: base             # CPU-friendly (tiny is faster, small is better)
+output_width: 1080
+output_height: 1920
+
+# Posting destinations — ALL OFF by default. Turn a platform on ONLY
+# after its auth is wired and poster.py --check reports it OK.
+# Accounts: Instagram @clippedaily31, TikTok @clips.daily548,
+# YouTube Clips Daily @Clippedaily31. Never point this at a
+# personal account.
+platforms:
+  instagram: false
+  tiktok: false
+  youtube: false

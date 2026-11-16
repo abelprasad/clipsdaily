@@ -1,0 +1,72 @@
+{
+    "_note": "EXAMPLE ONLY \u2014 the Nov 15, 2026 Expedia x IShowSpeed campaign, shown so the schema is clear. State, budgets, and local_video are placeholders. Do NOT submit against this file: start from an empty campaigns.json and let campaign_watcher.py fill it, or join in the browser and let the watcher reconcile.",
+    "campaigns": {
+        "afeca1a0-f44c-46ad-8194-09d62b56589e": {
+            "brand": "Reach",
+            "budget_available_cents": 0,
+            "budget_spent_cents": 0,
+            "budget_total_cents": 800000,
+            "caption_must_name": "destination",
+            "category": "Streamer",
+            "discovered_at": "2026-11-15T14:26:00",
+            "exclude_ranges": [
+                [
+                    11030,
+                    11049
+                ]
+            ],
+            "hook_by_destination": {
+                "Hong Kong": "SPEED GAVE HIM $10,000!",
+                "Japan": "HE JUST WON A TRIP TO JAPAN!"
+            },
+            "id": "afeca1a0-f44c-46ad-8194-09d62b56589e",
+            "is_verified": true,
+            "local_video": "vod/<vod_id>_expedia_tail.mp4",
+            "local_video_offset_s": 10589,
+            "max_payout_cents": 50000,
+            "min_payout_cents": 1000,
+            "min_views": 10000,
+            "moments": [
+                {
+                    "destination": "Japan",
+                    "hook": "HE JUST WON A TRIP TO JAPAN!",
+                    "intensity": 3.4,
+                    "phrase": "Hudson, you're going to Japan",
+                    "spike_s": 10745
+                },
+                {
+                    "destination": "Hong Kong",
+                    "hook": "SPEED GAVE HIM $10,000!",
+                    "intensity": 3.4,
+                    "phrase": "Expedia is giving you ten thousand dollars",
+                    "spike_s": 10905
+                }
+            ],
+            "platforms": [
+                "instagram",
+                "tiktok",
+                "youtube"
+            ],
+            "rate_per_1k": 1.0,
+            "required_hashtag": "#IShowSpeed",
+            "required_mentions": [
+                "Expedia"
+            ],
+            "requires_application": false,
+            "source": "content_rewards",
+            "state": "example",
+            "state_reason": "template only, not joined",
+            "status": "active",
+            "stream_date_text": "Stream 11.6.26",
+            "streamer": "ishowspeed",
+            "title": "$$8,000 Expedia x IShowSpeed Campaign",
+            "updated_at": "2026-11-15T14:26:00",
+            "url": "https://contentrewards.com/c/campaigns/afeca1a0-f44c-46ad-8194-09d62b56589e",
+            "vod_date": "2026-11-06",
+            "vod_id": "2921253522",
+            "window_end_s": null,
+            "window_start_s": 10589,
+            "window_text": "Content must be from IShowSpeed's Stream 11.6.26. Content sourced from other Streams, Videos, and posts WILL BE REJECTED. Any footage from 2:56:29 until the end of stream is acceptable."
+        }
+    }
+}

@@ -1,0 +1,39 @@
+# Credentials and auth state — NEVER commit.
+.auth/
+*cookies*.txt
+*client_secrets*.json
+*youtube_token*.json
+*instagram_session*.json
+*.pem
+*.key
+.env
+
+# Runtime state, media, and logs — created by running the pipeline.
+queue/
+ig-outbox/
+clips/
+vod/
+recordings/
+campaign_work/
+submit-outbox/
+logs/
+*.mp4
+*.srt
+*.log
+*.mp3
+*.wav
+STOP
+
+# Live state files (contain real campaign data / submission IDs).
+config.yaml
+campaigns.json
+join_requests.json
+join_results.json
+earnings.json
+earnings_dump.json
+vyro_dump.json
+
+# Python + editor noise.
+__pycache__/
+*.pyc
+.DS_Store
