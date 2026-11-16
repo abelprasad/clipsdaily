@@ -350,6 +350,10 @@ text: `docs/CAPTIONS.md`.
 - **Credit the streamer in every post, and post only to the
   clipsdaily accounts** — never the personal account.
 
+## Architecture decisions
+
+The decisions behind the rules above live in the architecture decision log: [`docs/adr/README.md`](docs/adr/README.md). Fifteen ADRs, all decided Nov 15, 2026, in the Nygard template (Title, Status, Context, Decision, Consequences). ADRs are immutable: a changed decision gets a new ADR that supersedes the old one, never a rewrite.
+
 ## Dev workflow
 
 ### Repo vs live runtime
@@ -514,7 +518,7 @@ listed lines. Do not refactor working code just for this.
 | `deploy.sh` | Deploys this repo to the live dir: backup, copy `.py`, restart tmux. `--dry-run` prints the plan and changes nothing. |
 | `config/` | `config.yaml.example`, `campaigns.example.json` (templates; copy to `config.yaml` / `campaigns.json`) |
 | `scripts/` | Operator-machine helpers: `ig-post-staged.sh` (Instagram cron), `submit_cron.sh`, `submit_mark.sh` |
-| `docs/` | `AUTOMATION.md`, `CAPTIONS.md`, `CAMPAIGNS.md`, `TIKTOK.md`, `AUTH.md`, `OPERATIONS.md`, `PATHS.md`, `SUBMIT_CRON_BODY.md`, `earnings_dump_spec.md`, `youtube-vod-notes.md` |
+| `docs/` | `adr/` (architecture decision log, `adr/README.md` is the index), `AUTOMATION.md`, `CAPTIONS.md`, `CAMPAIGNS.md`, `TIKTOK.md`, `AUTH.md`, `OPERATIONS.md`, `PATHS.md`, `SUBMIT_CRON_BODY.md`, `earnings_dump_spec.md`, `youtube-vod-notes.md` |
 | `skills/` | `motion-design/` (vendored, MIT) + install notes for `ffmpeg-skill` and `video-editing` |
 | `assets/` | `clipsdaily-logo.jpg` (brand logo) |
 
