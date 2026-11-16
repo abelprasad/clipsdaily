@@ -1,5 +1,9 @@
 # TikTok — session notes, blocked status, known bugs
 
+## Content Posting API route (Nov 16, 2026) — see TIKTOK_API_SETUP.md
+
+The durable fix for the blocked cookie session is the official Content Posting API (`tiktok_api.py`, wired into `poster.py` / `hourly_poster.py`, off by default behind `tiktok_api: true`). No developer app exists yet, so no live call has been made. Risk: TikTok says apps for private/personal use are not approved — the audit may refuse a one-account pipeline; fallbacks are draft mode or a paid scheduler. App review also needs a website with Privacy Policy + Terms; clipsdaily has none yet.
+
 ## Status (Nov 15, 2026): auto-posting blocked, account fine
 
 TikTok auto-posting is blocked session-wide. The Japan 70s clip

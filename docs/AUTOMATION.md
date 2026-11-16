@@ -198,3 +198,29 @@ Run daily: `clipsdaily earnings --update && clipsdaily earnings --summary`.
   builder + this automation. Long ffmpeg burns (TikTok variant) can
   exceed SSH timeouts — run detached (nohup/tmux) for anything over
   ~5 min.
+
+## Nov 16, 2026 — TikTok Content Posting API route (off by default)
+
+- New module `tiktok_api.py`: official Content Posting API
+  (open.tiktokapis.com) — OAuth (user.info.basic + video.upload +
+  video.publish), Direct Post + draft mode, chunked FILE_UPLOAD,
+  status polling, token refresh with rotation. No cookies, no
+  Playwright. No live TikTok call has been made (no developer app
+  exists yet); tested with mocks only.
+- `poster.py`: `post_tiktok` routes to the API when `tiktok_api: true`
+  in config.yaml, else the Playwright cookie path (unchanged). New
+  `allow_short` flag keeps the hourly 30s fallback. `check_tiktok`
+  reports the API token when a client file exists.
+- `hourly_poster.py`: reads `tiktok_api`/`tiktok_api_mode` from
+  config.yaml every slot (no restart to flip); PENDING:/DRAFT:
+  publish_ids are reconciled next slot instead of re-uploaded; cap
+  hits never burn a retry; a failed reconcile waits for next slot.
+- Caps enforced in code: ~15 Direct Posts/day per creator (rolling
+  24h counter in `.auth/tiktok_api_usage.json`), 5 pending drafts/24h.
+- Full checklist + audit risk: `TIKTOK_API_SETUP.md`. Risk: TikTok
+  says apps for private/personal use are not approved — the audit
+  may refuse a one-account pipeline; fallbacks are draft mode (no
+  audit) or a paid scheduler. App review also needs a website with
+  Privacy Policy + Terms; clipsdaily has none yet.
+- Tests: `test_tiktok_api.py` 24/24, `test_poster_tiktok_api.py`
+  12/12 (both mocked, pass on indra).

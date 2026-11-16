@@ -11,6 +11,16 @@ logs everything to logs/hourly-YYYYMMDD.log.
 YouTube 8/day (Nov 16, 2026): the channel hit YouTube's daily upload
 limit at 9 posts on Nov 15, so 2/hour (48/day) re-hits the limit
 within hours. A YouTube uploadLimitExceeded never burns a retry.
+TikTok API route (Nov 16, 2026): when config.yaml sets
+`tiktok_api: true`, TikTok posts go through the official Content
+Posting API (tiktok_api.py) instead of the Playwright cookie
+session — no cookies, no browser, capped at ~15 Direct Posts/day
+and 5 pending drafts/24h (enforced in tiktok_api.py; a cap hit
+never burns a retry). A post that is on TikTok but not public yet
+comes back as PENDING:<publish_id> (still processing) or
+DRAFT:<publish_id> (waiting in the creator inbox); the next slot
+reconciles it instead of re-uploading.
+
 Instagram meta rule: ig-outbox/meta.json status is IG state only —
 "staged" until the IG cron posts it, "posted" after — YouTube/TikTok
 outcomes must never flip it (that bug silently killed the IG leg on
@@ -40,7 +50,23 @@ QUEUE_FILE = QUEUE_DIR / "queue.json"
 OUTBOX = HERE / "ig-outbox"
 STOP_FILE = HERE / "STOP"
 LOGS = HERE / "logs"
-CONFIG = {"platforms": {"youtube": True, "tiktok": True, "instagram": False}}
+CONFIG = {"platforms": {"youtube": True, "tiktok": True, "instagram": False},
+          "tiktok_api": False, "tiktok_api_mode": "direct"}
+
+
+def refresh_config():
+    """Merge tiktok_api flags from config.yaml into CONFIG.
+
+    Read every slot so flipping `tiktok_api: true` in config.yaml
+    takes effect without restarting this poster.
+    """
+    try:
+        import yaml
+        cfg = yaml.safe_load((HERE / "config.yaml").read_text()) or {}
+        CONFIG["tiktok_api"] = bool(cfg.get("tiktok_api", False))
+        CONFIG["tiktok_api_mode"] = cfg.get("tiktok_api_mode", "direct")
+    except Exception:
+        pass
 MAX_RETRIES = 2
 YT_HOURS = {0, 3, 6, 9, 12, 15, 18, 21}  # YouTube slots: 8/day
 
@@ -197,7 +223,36 @@ def post_entry(entry, hour_label):
                     entry["yt_retries"] = entry.get("yt_retries", 0) + 1
                     log(f"{entry['id']}: youtube FAILED (try "
                         f"{entry['yt_retries']}): {e}")
-    if not entry.get("tt_url"):
+    tt_url = entry.get("tt_url") or ""
+    reconciled_failed = False
+    if isinstance(tt_url, str) and tt_url.startswith(("PENDING:", "DRAFT:")):
+        # A previous slot put the video on TikTok but it is not public
+        # yet: reconcile the publish_id instead of re-uploading.
+        pid = tt_url.split(":", 1)[1]
+        kind = "DRAFT" if tt_url.startswith("DRAFT:") else "PENDING"
+        try:
+            from tiktok_api import reconcile_pending
+            out = reconcile_pending(pid)
+            res = out[0] if out else {}
+            if res.get("url"):
+                entry["tt_url"] = res["url"]
+                log(f"{entry['id']}: TIKTOK LIVE (reconciled {kind}) "
+                    f"{res['url']}")
+            elif res.get("status") == "failed":
+                entry["tt_url"] = None
+                entry["tt_retries"] = entry.get("tt_retries", 0) + 1
+                # Do NOT re-upload in this same slot: the identical
+                # file would fail the same way on TikTok's side.
+                reconciled_failed = True
+                log(f"{entry['id']}: tiktok {kind} FAILED on TikTok "
+                    f"({res.get('fail_reason', '')}) — retry "
+                    f"{entry['tt_retries']} next slot")
+            else:
+                log(f"{entry['id']}: tiktok still {kind.lower()} "
+                    f"({res.get('status', 'unknown')}) — waiting, no retry")
+        except Exception as e:
+            log(f"{entry['id']}: tiktok reconcile failed: {e} — waiting")
+    if not entry.get("tt_url") and not reconciled_failed:
         if entry.get("tt_retries", 0) >= MAX_RETRIES:
             log(f"{entry['id']}: tiktok retries exhausted, giving up")
             entry["tt_url"] = "FAILED"
@@ -205,31 +260,51 @@ def post_entry(entry, hour_label):
             tt_file = entry.get("tiktok") or entry["clip30"]
             fallback = not entry.get("tiktok")
             try:
-                if fallback:
-                    # No 60-90s variant yet: post the 30s anyway per
-                    # Abel's hourly order (earns no Creator Rewards,
-                    # but keeps the hourly cadence on TikTok).
-                    # Subprocess (Nov 16, 2026): in-process TikTok
-                    # leaks its Playwright loop; see post_file_subprocess.
-                    from post_tiktok_fixed import post_file_subprocess
-                    ok, url, detail = post_file_subprocess(
-                        str(tt_file), entry["caption_tiktok"],
-                        label=entry["id"])
-                    if not ok or not url:
-                        raise RuntimeError("tiktok post failed: %s" % detail)
+                # One call for both paths: post_tiktok routes to the
+                # official API when CONFIG["tiktok_api"] is on, else
+                # the Playwright cookie session. allow_short keeps the
+                # 30s fallback (Abel's hourly order) — it earns no
+                # Creator Rewards but keeps the hourly cadence.
+                url = post_tiktok(Path(tt_file), channel, CONFIG,
+                                  entry.get("platform", "twitch"),
+                                  caption=entry["caption_tiktok"],
+                                  allow_short=fallback)
+                if url is False:
+                    # API cap hit (or platform off): nothing posted,
+                    # nothing to retry — the cap resets with time.
+                    log(f"{entry['id']}: tiktok skipped (API cap) — "
+                        f"will retry next slot, no retry burned")
                 else:
-                    url = post_tiktok(Path(tt_file), channel, CONFIG,
-                                      entry.get("platform", "twitch"),
-                                      caption=entry["caption_tiktok"])
-                entry["tt_url"] = url
-                log(f"{entry['id']}: TIKTOK LIVE {url}"
-                    + (" (30s fallback)" if fallback else ""))
+                    entry["tt_url"] = url
+                    if isinstance(url, str) and url.startswith(
+                            ("PENDING:", "DRAFT:")):
+                        log(f"{entry['id']}: tiktok {url.split(':')[0]} "
+                            f"{url} — will reconcile next slot, no retry")
+                    else:
+                        log(f"{entry['id']}: TIKTOK LIVE {url}"
+                            + (" (30s fallback)" if fallback else ""))
             except Exception as e:
-                entry["tt_retries"] = entry.get("tt_retries", 0) + 1
-                log(f"{entry['id']}: tiktok FAILED (try "
-                    f"{entry['tt_retries']}): {e}")
+                # TikTokUploadPending (poll timed out after the bytes
+                # landed): record the publish_id, do NOT burn a retry
+                # and do NOT re-upload — next slot reconciles it.
+                try:
+                    from tiktok_api import TikTokUploadPending
+                    pending = isinstance(e, TikTokUploadPending)
+                except Exception:
+                    pending = False
+                if pending:
+                    entry["tt_url"] = f"PENDING:{e.publish_id}"
+                    log(f"{entry['id']}: tiktok PENDING {e.publish_id} "
+                        f"— will reconcile next slot, no retry")
+                else:
+                    entry["tt_retries"] = entry.get("tt_retries", 0) + 1
+                    log(f"{entry['id']}: tiktok FAILED (try "
+                        f"{entry['tt_retries']}): {e}")
     yt_done = bool(entry.get("yt_url")) and entry["yt_url"] != "FAILED"
-    tt_done = bool(entry.get("tt_url")) and entry["tt_url"] != "FAILED"
+    tt_done = (bool(entry.get("tt_url"))
+               and entry["tt_url"] != "FAILED"
+               and not str(entry.get("tt_url")).startswith(
+                   ("PENDING:", "DRAFT:")))
     yt_dead = entry.get("yt_url") == "FAILED"
     tt_dead = entry.get("tt_url") == "FAILED"
     # A platform marked FAILED is resolved: the entry must not sit
@@ -267,6 +342,7 @@ def main():
             log("STOP file present, skipping %s" % hour_label)
             time.sleep(60)
             continue
+        refresh_config()
         entries = load_queue()
         pending = [e for e in entries if e["status"] in ("pending", "partial")]
         if not pending:
@@ -280,7 +356,10 @@ def main():
             # Non-YouTube slots keep TikTok/IG at 2/hour: take the first
             # entry that still needs a TikTok post, instead of sitting
             # behind an entry that is only waiting on its YouTube slot.
-            need_tt = [e for e in pending if not e.get("tt_url")]
+            need_tt = [e for e in pending
+                       if not e.get("tt_url")
+                       or str(e.get("tt_url")).startswith(
+                           ("PENDING:", "DRAFT:"))]
             entry = need_tt[0] if need_tt else pending[0]
         log("posting %s at %s (streamer %s)%s"
             % (entry["id"], hour_label, entry["streamer"],

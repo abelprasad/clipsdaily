@@ -15,9 +15,14 @@ indra). Each platform reads its own credential file there:
 - YouTube @Clippedaily31 — OAuth token .auth/youtube_token.json
   (created by auth_youtube.py from .auth/youtube_client_secrets.json,
   a Desktop-app OAuth client for clippedaily31@gmail.com).
-- TikTok @clips.daily548 — browser cookies file
+- TikTok @clips.daily548 — two routes. OFFICIAL API (tiktok_api.py,
+  enabled by `tiktok_api: true` in config.yaml): OAuth token
+  .auth/tiktok_api_token.json, no cookies, no browser. COOKIE FALLBACK
+  (default while the developer app is unaudited): browser cookies file
   .auth/tiktok_cookies.txt in Netscape format (exported from Abel's
   browser while signed in as Clips Daily; must contain sessionid).
+  The API route is capped at ~15 Direct Posts/day per creator and
+  5 pending drafts/24h (enforced in tiktok_api.py).
 
 This module NEVER posts to Abel's personal accounts. Each function
 raises until its platform is explicitly enabled in config.yaml.
@@ -230,11 +235,21 @@ def _tiktok_cookies():
 
 
 def check_tiktok():
-    """Checks the cookies file only. Returns (ok, detail).
+    """Checks the TikTok route. Returns (ok, detail).
 
-    A full login check needs an upload attempt, so this is partial:
-    it proves a sessionid is on disk, not that TikTok still accepts it.
+    If the API client file exists, the API token is checked (read-only
+    creator-info call) — that is the live route once configured. The
+    cookie check below is the fallback; it proves a sessionid is on
+    disk, not that TikTok still accepts it (a full login check needs
+    an upload attempt).
     """
+    try:
+        import tiktok_api
+        if tiktok_api.CLIENT_FILE.exists():
+            ok, detail = tiktok_api.check_tiktok_api()
+            return ok, "API: " + detail
+    except Exception:
+        pass
     try:
         path = _tiktok_cookies()
         return False, (f"cookies file present at {path} but upload is "
@@ -243,25 +258,64 @@ def check_tiktok():
         return False, str(e)
 
 
-def post_tiktok(clip, channel, config, platform="twitch", caption=None):
+def _post_tiktok_api(clip, caption, config):
+    """TikTok via the official Content Posting API (tiktok_api.py).
+
+    Returns the public video URL, or "PENDING:<publish_id>" /
+    "DRAFT:<publish_id>" when the video is on TikTok but not public
+    yet (callers reconcile the publish_id later instead of
+    re-uploading). Returns False when the daily cap is hit (no retry
+    burned — the cap resets with time). Raises AuthNotConfigured when
+    the API client/token files are missing, and TikTokUploadPending
+    when the bytes landed but moderation is still running.
+    """
+    import tiktok_api
+    if not tiktok_api.CLIENT_FILE.exists():
+        raise AuthNotConfigured(
+            "TikTok API client missing: create the developer app and "
+            "run tiktok_api.py --auth-url (see TIKTOK_API_SETUP.md)")
+    mode = config.get("tiktok_api_mode", "direct")
+    try:
+        if mode == "draft":
+            res = tiktok_api.post_video_draft(str(clip))
+            print(f"[poster] tiktok API draft staged {res['publish_id']} "
+                  f"(publish it from the TikTok app)", flush=True)
+            return f"DRAFT:{res['publish_id']}"
+        res = tiktok_api.post_video_direct(str(clip), caption)
+        print(f"[poster] tiktok API posted {res['url']}", flush=True)
+        return res["url"]
+    except tiktok_api.TikTokCapReached as e:
+        print(f"[poster] tiktok API cap reached, skipping (no retry "
+              f"burned): {e}", flush=True)
+        return False
+    except tiktok_api.TikTokUploadPending:
+        raise  # callers reconcile the publish_id; never re-upload
+
+
+def post_tiktok(clip, channel, config, platform="twitch", caption=None,
+                allow_short=False):
     if not config.get("platforms", {}).get("tiktok"):
         print("[poster] tiktok OFF, skipping", flush=True)
         return False
     # Hard guard: TikTok only pays for clips over 60s. Refuse anything
-    # shorter — a 30s clip must never go to TikTok.
+    # shorter — a 30s clip must never go to TikTok, except the hourly
+    # poster's explicit 30s fallback (allow_short), which keeps the
+    # hourly cadence but earns no Creator Rewards.
     try:
         dur = _duration_seconds(clip)
     except Exception as e:
         print(f"[poster] tiktok: could not probe {clip}: {e}", flush=True)
         return False
-    if dur < TIKTOK_MIN_SECONDS:
+    if dur < TIKTOK_MIN_SECONDS and not allow_short:
         print(f"[poster] tiktok REFUSED {Path(clip).name}: {dur:.0f}s, "
               f"needs {TIKTOK_MIN_SECONDS}s+ for Creator Rewards",
               flush=True)
         return False
-    _tiktok_cookies()  # early auth guard: raises if cookies/sessionid missing
     if caption is None:
         caption = _caption(channel, platform=platform)
+    if config.get("tiktok_api"):
+        return _post_tiktok_api(clip, caption, config)
+    _tiktok_cookies()  # early auth guard: raises if cookies/sessionid missing
     # Fixed flow (Nov 15, 2026): stock tiktok-uploader's Post click is
     # broken by TikTok's content-checks TUXModal + joyride overlay.
     # post_tiktok_fixed dismisses the modal, removes the overlays,
@@ -302,9 +356,14 @@ def post_all(clip, channel, config, platform="twitch", tiktok_clip=None,
                   "(30s clip is never posted to TikTok)", flush=True)
         else:
             try:
-                if post_tiktok(Path(tiktok_clip), channel, config, platform,
-                               caption=caption):
+                res = post_tiktok(Path(tiktok_clip), channel, config,
+                                  platform, caption=caption)
+                if res and isinstance(res, str) and res.startswith("http"):
                     done.append("tiktok")
+                elif res:
+                    print(f"[poster] tiktok: {res} (on TikTok, not public "
+                          f"yet — reconcile the publish_id later)",
+                          flush=True)
             except AuthNotConfigured as e:
                 print(f"[poster] tiktok: auth not configured: {e}",
                       flush=True)

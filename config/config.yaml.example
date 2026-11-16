@@ -49,3 +49,12 @@ platforms:
   instagram: false
   tiktok: false
   youtube: false
+
+# TikTok Content Posting API (official, no cookies/Playwright).
+# tiktok_api: false until the developer app is created, authorized,
+# and audited (see docs/TIKTOK_API_SETUP.md). Flip to true only then.
+# tiktok_api_mode: direct (publish straight to the profile) or draft
+# (lands in the creator inbox; Abel taps publish on his phone).
+# Caps are enforced in code: ~15 Direct Posts/day, 5 pending drafts/24h.
+tiktok_api: false
+tiktok_api_mode: direct
