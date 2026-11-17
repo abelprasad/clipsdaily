@@ -5,7 +5,7 @@ portable copy of a LIVE pipeline (live dir: `/home/abel/clipsdaily`
 on indra). The live pipeline posts to real accounts with real
 money on the line. Treat this repo as the dev copy: develop and
 test here, never post/join/submit anything live without an
-explicit go from Abel, and never touch the live dir.
+explicit go from me, and never touch the live dir.
 
 ## Standing rules (never break these)
 
@@ -47,7 +47,7 @@ explicit go from Abel, and never touch the live dir.
    Content Rewards dashboard shows Pending WITH a submission ID.
 7. **Credit the streamer in every post.** Caption names the
    streamer; the video overlay carries `clipsdaily • <streamer>`.
-8. **Clipsdaily accounts only, never Abel's personal accounts.**
+8. **Clipsdaily accounts only, never my personal accounts.**
    Instagram @clippedaily31, TikTok @clips.daily548, YouTube
    Clips Daily @Clippedaily31.
 9. **No credentials in the repo, ever.** `.auth/` is gitignored.

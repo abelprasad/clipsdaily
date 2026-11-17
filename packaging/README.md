@@ -5,7 +5,7 @@ human or agent intervention after a one-time setup.
 
 **ClipForge is proprietary.** See `LICENSE` (no
 redistribution, no resale, no sublicensing) and `BETA_TERMS.md`.
-The repo is public to read (Abel's call, Nov 17, 2026); public does
+The repo is public to read (my call, Nov 17, 2026); public does
 not mean open source. Do not copy `packaging/` into the public
 skills repo.
 
@@ -29,10 +29,10 @@ requires no server:
   where payload is JSON
   `{"kid", "email", "exp": "YYYY-MM-DD", "tier"}`.
 - **Signature:** Ed25519 over the raw payload bytes. The vendor
-  private key is held by Abel only (never in this repo, the package,
+  private key is held by me only (never in this repo, the package,
   or the installer); the public key is baked into
   `src/clipsdaily/license.py`, so anyone can verify a key and only
-  Abel can issue one.
+  I can issue one.
 - **What the installer checks:** format, signature against the
   baked-in public key, and expiry. A bad, tampered, or expired key
   refuses the install before any runtime state is created.
@@ -87,7 +87,7 @@ into a customer install and must not be published.
 
 ## Public repo, proprietary license
 
-As of Nov 17, 2026 (Abel's decision) this repo is public to read at
+As of Nov 17, 2026 (my decision) this repo is public to read at
 `github.com/abelprasad/clipsdaily`, including the `packaging/` branch.
 Public does NOT mean open source: the ClipForge Proprietary License
 ("licensed, not sold") still forbids redistribution, resale, and

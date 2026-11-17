@@ -6,11 +6,11 @@ Accepted — 2026-11-15
 
 ## Context
 
-TikTok posting needed a sign-in route that automation can actually use. The saved Vault TikTok password was rejected by TikTok, and Abel signed in with Google as Clips Daily instead. TikTok's pages render in the cloud browser but their JavaScript does not run, so automation cannot complete any TikTok OAuth authorization there; every control on the page is inert.
+TikTok posting needed a sign-in route that automation can actually use. The saved Vault TikTok password was rejected by TikTok, and I signed in with Google as Clips Daily instead. TikTok's pages render in the cloud browser but their JavaScript does not run, so automation cannot complete any TikTok OAuth authorization there; every control on the page is inert.
 
 ## Decision
 
-TikTok posts via `tiktok-uploader` plus a Netscape cookies file (`.auth/tiktok_cookies.txt`) exported from Abel's browser. The cookie file is the working sign-in route. Sessions expire, so if a post fails on auth, re-export the cookies from Abel's browser and replace the file.
+TikTok posts via `tiktok-uploader` plus a Netscape cookies file (`.auth/tiktok_cookies.txt`) exported from my browser. The cookie file is the working sign-in route. Sessions expire, so if a post fails on auth, re-export the cookies from my browser and replace the file.
 
 ## Consequences
 

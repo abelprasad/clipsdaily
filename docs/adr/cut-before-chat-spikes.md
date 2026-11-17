@@ -6,7 +6,7 @@ Accepted — 2026-11-15
 
 ## Context
 
-The hard part of clipping is choosing the moment, not cutting or captioning it. Chat spikes mark moments, but a spike's peak usually comes after the moment happened: chat reacts to what it just saw. Cutting exactly at the spike would start the clip after the good part. The style references Abel sent the same day also showed that very short clips win: 5-second and 10-second moments doing 4.6M and 1.6M plays.
+The hard part of clipping is choosing the moment, not cutting or captioning it. Chat spikes mark moments, but a spike's peak usually comes after the moment happened: chat reacts to what it just saw. Cutting exactly at the spike would start the clip after the good part. The style references I sent the same day also showed that very short clips win: 5-second and 10-second moments doing 4.6M and 1.6M plays.
 
 ## Decision
 

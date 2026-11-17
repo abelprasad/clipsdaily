@@ -11,7 +11,7 @@ The ClipForge ads lived in a separate local git repo
 no remote). The pipeline repo was being preserved as the single public
 repo `abelprasad/clipsdaily`. Two options: a second public repo
 (`abelprasad/clipforge-ads`) or the ads as a subdirectory of the one
-repo. Abel picked one repo, ads inside.
+repo. I picked one repo, ads inside.
 
 ## Decision
 

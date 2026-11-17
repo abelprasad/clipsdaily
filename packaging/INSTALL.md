@@ -18,7 +18,7 @@ health check).
 
 ## Install
 
-You get the installer + a license key from Abel directly — there is
+You get the installer + a license key from me directly — there is
 no public download. (ClipForge is proprietary and private.)
 
 ```bash

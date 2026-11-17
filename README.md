@@ -21,9 +21,9 @@ It also joins and submits clipping campaigns (Content Rewards)
 behind a strict eligibility gate, because one bad submission
 bans the account from every campaign permanently.
 
-> **This project is shut down as of Nov 17, 2026.** Abel killed it —
+> **This project is shut down as of Nov 17, 2026.** I killed it —
 > see [`docs/RESTART.md`](docs/RESTART.md) for the shutdown state and
-> how to bring it back. The repo is public (Abel's call) and stays
+> how to bring it back. The repo is public (my call) and stays
 > under the ClipForge Proprietary License: read it, don't resell it.
 
 > **This repo is the canonical dev copy** (decided Nov 15, 2026).
@@ -355,8 +355,8 @@ flowchart TD
 
 ## Standing rules
 
-These were set by Abel across Nov 15, 2026. They supersede
-everything earlier. Do not change them without his go. Full
+I set these across Nov 15, 2026. They supersede
+everything earlier. Do not change them without my go. Full
 text: `docs/CAPTIONS.md`.
 
 - **Full frame, never crop.** Every clip is 1080x1920: the
@@ -491,18 +491,18 @@ backup path).
 - Long ffmpeg jobs run detached (nohup/tmux), never over a
   bare SSH pipe.
 
-## Muse / Friday-specific dependencies
+## Agent-specific dependencies
 
-This repo was built by Muse (Friday) and some pieces only work
+I built this repo with my agent, and some pieces only work
 in that setup. A Claude Code (or any other agent) user must
 replace them:
 
 ### 1. Instagram posting moved to indra (Nov 17, 2026) — then shut down
 
 The VM route (`scripts/ig-post-staged.sh` with `instagram-cli`,
-glibc 2.39 + a local privsep socket that only exists on the Muse
+glibc 2.39 + a local privsep socket that only exists on my operator
 VM) stalled: every run asked for a one-time runtime approval and
-overnight requests timed out while Abel slept, so nothing posted
+overnight requests timed out while I slept, so nothing posted
 for hours. The fix was `permissions.preapprove` (it refuses:
 `not_preapprovable` for this method). **The IG poster moved to
 indra Nov 17, 2026 — see `docs/AUTH.md` and `docs/RESTART.md`:**

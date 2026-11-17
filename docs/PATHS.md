@@ -320,7 +320,7 @@ to refresh.
 | `docs/adr/keep-live-state-out-of-git.md` | 19 | `- The live directory on indra (`/home/abel/clipsdaily/`) remains the single source of runtime truth; the repo ` |
 | `docs/adr/use-repo-as-dev-copy.md` | 9 | `The pipeline lived only in `/home/abel/clipsdaily/` on indra, with no portable copy and no way for another age` |
 | `docs/adr/use-repo-as-dev-copy.md` | 13 | `This repo is the canonical dev copy where work happens. `/home/abel/clipsdaily/` on indra is the live runtime.` |
-| `docs/adr/use-repo-as-dev-copy.md` | 20 | `- The repo documents the Muse/Friday-specific dependencies in the README: Instagram posting runs on the operat` |
+| `docs/adr/use-repo-as-dev-copy.md` | 20 | `- The repo documents the agent-specific dependencies in the README: Instagram posting runs on the operat` |
 | `docs/configuration.md` | 8 | `clipsdaily --home /home/abel/clipsdaily run` |
 | `docs/configuration.md` | 36 | `| `CLIPSDAILY_LIVE_DIR` | Live dir for `deploy.sh` (default `/home/abel/clipsdaily`). |` |
 | `docs/earnings_dump_spec.md` | 8 | `/home/abel/clipsdaily/earnings_dump.json (via indra.sh + sudo tee):` |
@@ -333,4 +333,4 @@ to refresh.
 - Binaries expected at `~/.local/bin/{ffmpeg,streamlink,yt-dlp,TwitchDownloaderCLI}` (ffmpeg 9 via micromamba; system ffmpeg 4.4 is too old).
 - Auth must be recreated from scratch per `docs/AUTH.md` (`.auth/` is gitignored).
 - Instagram posting runs on the operator machine, not indra — `scripts/ig-post-staged.sh` needs `instagram-cli` plus the SSH route.
-- Operator crons assume Muse's scheduler — the IG 30-min cron, campaign-watch, earnings, and auto-submit crons need the operator's own scheduler (cron/systemd) and a logged-in browser session for Content Rewards submits and dashboard dumps.
+- Operator crons assume my agent's scheduler — the IG 30-min cron, campaign-watch, earnings, and auto-submit crons need the operator's own scheduler (cron/systemd) and a logged-in browser session for Content Rewards submits and dashboard dumps.

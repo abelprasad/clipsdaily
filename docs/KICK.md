@@ -100,8 +100,8 @@ runner reads config once at startup; the hourly poster needs no restart).
 - **Recovered adinross clip, unposted.** `clips/kick_adinross_72s.mp4` +
   75s TikTok version (Nov 16 05:56) were NOT staged into the live queue
   — staging it would post it at the next hourly slot, and no post goes
-  out without Abel's go. Cleanup deletes unposted clips after 48h
-  (~Nov 18 05:58). Abel's call: stage it (posts next slot) or let it lapse.
+  out without my go. Cleanup deletes unposted clips after 48h
+  (~Nov 18 05:58). My call: stage it (posts next slot) or let it lapse.
 
 ## ToS / rate-limit notes
 
@@ -114,5 +114,5 @@ runner reads config once at startup; the hourly poster needs no restart).
   API's numeric rate limits are unpublished. Current load is light:
   ~1 streamlink live-check/min per channel + 1 Pusher connection per
   live stream. If the Pusher route breaks, the fallback is the official
-  API with a developer app (needs Abel's Kick login) + webhooks — not
+  API with a developer app (needs my Kick login) + webhooks — not
   built, not needed today.

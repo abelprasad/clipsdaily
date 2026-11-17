@@ -14,7 +14,7 @@ numbers — OpusClip Pro is **$29/mo**, not $19.
 - **v3 animation (Nov 16, 2026):** full reel style — an endless-runner background drawn in code (parallax skylines, scrolling ground, runner silhouette, coins, speed lines, all behind a scrim so copy stays legible) plus kinetic text: hook words pop in one at a time with the $49 counting up 0 → 49, receipt rows slide in, the total slams in, the CTA pulses. No ripped footage, no copyrighted assets.
 - **v6 explainer (Nov 16, 2026):** full rebuild in the animated-explainer format — hook is a rising cost bar ($29 OpusClip + $20 Claude stacking to $49/mo), build is four named parts (watcher → cutter → ranker → poster, outcome-level names only, no code/paths/internals on screen), mechanism is two timelines (ClipForge posts while live, Opus/Vizard only after the VOD), result is $0 credits burned + 3 real metrics + price. 5 beats, 38.1s, Kokoro af_heart 1.1x, fastest beat 179 wpm (every beat ≤200).
 - **v5 pace (Nov 16, 2026):** same ad, faster — Kokoro speed 1.1, Kokoro leading/trailing silence trimmed (0.05s pads, sample-accurate; ffmpeg silenceremove was rejected: its stop side leaves no pad and clips final words), beat tail 0.4s, minSeconds floors lowered; 34.2s total, inter-beat gaps ~0.5s. No script, visual, or CTA change.
-- Voiceover: AI voice, never Abel's voice. Kokoro TTS (Kokoro-82M, MIT,
+- Voiceover: AI voice, never my voice. Kokoro TTS (Kokoro-82M, MIT,
   free, local, offline), voice `af_heart` at speed 1.1,
   loudness-normalized to -17 dB mean. Runs in `.venv-kokoro/`
   (installed once, see Voiceover section).
@@ -113,11 +113,11 @@ and beats fall back to `minSeconds` with no audio.)
 - To add a voiceover file by hand instead: drop a WAV at
   `public/voiceover/<beat-id>.wav` and set that beat's seconds in
   `script.json` under `timings`.
-- No ElevenLabs, no paid voice service, no Abel recordings. Ever.
+- No ElevenLabs, no paid voice service, no recordings of my voice. Ever.
 
 ## IP protection — what ads may and may not show
 
-Standing rule (Abel, Nov 16, 2026): nobody steals this. Ads show the
+My standing rule (Nov 16, 2026): nobody steals this. Ads show the
 **outcome only** — the dashboard, posted clips, the bill math, the result.
 They never show internals:
 
@@ -126,7 +126,7 @@ They never show internals:
 - No queue internals, no cutter logic, no ranking/spike logic.
 - Architecture diagrams are allowed ONLY at outcome level: named stages (Watcher, Cutter, Ranker, Poster) with no code, paths, config, thresholds, weights, or ranking logic. Anything showing how the cutter or ranker works stays out.
 
-Amended Nov 17, 2026 (Abel approved): outcome-level architecture is allowed; the no-internals rule still stands for everything else.
+Amended Nov 17, 2026 (I approved): outcome-level architecture is allowed; the no-internals rule still stands for everything else.
 The ads live in the clipsdaily repo under `clipforge-ads/` (public repo,
 ClipForge Proprietary License — see `clipforge-ads/LICENSE`). The `voices/`
 model and `public/voiceover/` WAVs are gitignored. If a future variant wants an outcome shot (dashboard,

@@ -2,8 +2,8 @@
 
 ## Maintainer
 
-Abel Prasad (abelprasad4@gmail.com) is the maintainer and decides
-releases, merges, and what ships. The clipsdaily accounts are his;
+I (Abel Prasad, abelprasad4@gmail.com) am the maintainer and decide
+releases, merges, and what ships. The clipsdaily accounts are mine;
 no one else posts, joins, or submits from them.
 
 ## Decisions

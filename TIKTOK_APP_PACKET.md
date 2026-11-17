@@ -1,10 +1,10 @@
 # TikTok developer app — registration packet for Clips Daily
 
 Copy-paste values for the form on https://developers.tiktok.com. Fill it
-in one pass, no decisions left. The only steps that need Abel are signing
+in one pass, no decisions left. The only steps that need me are signing
 in and submitting — everything below is already decided.
 
-## Sign-in (Abel's step)
+## Sign-in (my step)
 
 - Sign in at https://developers.tiktok.com **as @clips.daily548 via
   Google (clippedaily31@gmail.com)**.
@@ -37,7 +37,7 @@ d0d84b6, Nov 16, 2026, verified returning 200 with the full policy text).
 - Do not add `user.info.profile`, `user.info.stats`, or `video.list`.
   Extra scopes slow the review down.
 
-## Submit, then the audit (both are Abel's steps)
+## Submit, then the audit (both are my steps)
 
 1. **Submit for app review.** Attach the demo video (see below). Expect
    days to about two weeks; TikTok emails the result either way.
@@ -69,10 +69,10 @@ TikTok's docs say **apps for private or personal use are not approved**.
 This pipeline serves exactly one account (@clips.daily548), so the
 audit may refuse Direct Post and no code can work around that. If it
 refuses, the fallbacks are already built: draft mode (free, no audit,
-max 5 pending drafts/24h, Abel taps publish on his phone) or the
+max 5 pending drafts/24h, I tap publish on my phone) or the
 cookie path, or a paid scheduler. Second risk: the
 `content_preview_confirmed` / `express_consent_given` flags rest on
-Abel's standing approval plus the eligibility gate, not a human
+My standing approval plus the eligibility gate, not a human
 reviewing each clip — an auditor may push back on that. Full detail in
 TIKTOK_API_SETUP.md ("READ THIS FIRST").
 

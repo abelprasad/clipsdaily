@@ -16,5 +16,5 @@ Instagram Reels post via `instagram-cli` from the operator VM (the Muse VM), usi
 
 - IG posting cannot run on indra. Any agent working on the pipeline must keep the IG leg on the operator machine or fix the instagrapi route.
 - A Claude Code user must run the IG leg on their own operator machine with their own SSH route to indra, or fix `auth_instagram.py`.
-- Every `instagram-cli` post triggers a runtime approval card on the Instagram connector (content.publish). Abel has given standing permission to post without per-post approval, but the card itself is a system prompt, not Friday asking; if it ever offers an always-allow option, tapping it once stops the cards for good.
+- Every `instagram-cli` post triggers a runtime approval card on the Instagram connector (content.publish). I have given standing permission to post without per-post approval, but the card itself is a system prompt, not me asking; if it ever offers an always-allow option, tapping it once stops the cards for good.
 - Posts go ONLY to @clippedaily31, never to Abel's personal account (@abelprasad_), which is linked separately.

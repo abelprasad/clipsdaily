@@ -170,14 +170,14 @@ Run daily: `clipsdaily earnings --update && clipsdaily earnings --summary`.
 2. hourly_poster.py integration: prefer campaign_queue.json entries
    when a campaign is active (parent-approved step, NOT built — the
    hourly builder owns hourly_poster.py).
-3. Whop payout setup (Abel's money, his call — not done).
+3. Whop payout setup (my money, my call — not done).
 4. The Hong Kong TikTok 90s re-upload is a one-off outside this
    automation (VOD agent re-uploads, parent manually submits within
    30 min) — flag the gap; do not let the outbox write a duplicate.
 5. Legacy Speed clips are NOT seeded into campaign_queue.json (they
    live in clips/ + earnings by URL; seeding would duplicate submits).
 6. Re-auths cannot be automated: TikTok cookies / YouTube token
-   expire and only Abel can re-approve.
+   expire and only I can re-approve.
 
 ## Risks found
 
@@ -276,7 +276,7 @@ Run daily: `clipsdaily earnings --update && clipsdaily earnings --summary`.
   `campaign_eligible: false`) for the hourly poster to retry. Partial
   posts are NOT staged (would double-post). Dedup by id. The recovered
   05:56 adinross clip was NOT staged (would post next slot; no post
-  without Abel's go); cleanup deletes it after 48h unposted (~Nov 18 05:58).
+  without my go); cleanup deletes it after 48h unposted (~Nov 18 05:58).
 - Campaign safety: staged live entries have no `campaign_id` and no
   `vod_id`; auto_submit requires a campaign_id and the gate requires a
   vod_id match — blocked twice over (test 4).

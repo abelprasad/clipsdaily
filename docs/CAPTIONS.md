@@ -1,9 +1,9 @@
 # Captions, hooks, and framing — the standing rules (Nov 15, 2026)
 
-These rules were set by Abel across Nov 15, 2026. They supersede
+I set these rules across Nov 15, 2026. They supersede
 everything earlier (the launch-day README's "Whisper captions
 burned in" and "crops to vertical" are both stale). Do not change
-them without his go.
+them without my go.
 
 ## Post captions — one line, no hashtags
 

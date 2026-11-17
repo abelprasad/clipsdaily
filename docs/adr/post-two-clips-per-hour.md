@@ -6,11 +6,11 @@ Accepted — 2026-11-15
 
 ## Context
 
-Abel wanted a steady posting rhythm, not a flood and not a trickle: "i want a video clip posted on all three accounts every hour", corrected the same evening to "actually do two clips every hour" plus "make one rn first". One clip an hour would have left the queue full and the accounts quiet; more than two an hour risks looking like spam and tripping platform limits.
+I wanted a steady posting rhythm, not a flood and not a trickle: "i want a video clip posted on all three accounts every hour", corrected the same evening to "actually do two clips every hour" plus "make one rn first". One clip an hour would have left the queue full and the accounts quiet; more than two an hour risks looking like spam and tripping platform limits.
 
 ## Decision
 
-Two clips per hour, every hour, until Abel says stop. Slots are :00 and :30 for YouTube and TikTok (posted from indra by `hourly_poster.py`), and IG at :05 and :35 via `ig-outbox/` staging plus a 30-minute operator cron. The queue maintainer targets a seed of at least 24 pending clips and keeps cutting whenever pending drops below 12. Daily cap is 48 posts.
+Two clips per hour, every hour, until I say stop. Slots are :00 and :30 for YouTube and TikTok (posted from indra by `hourly_poster.py`), and IG at :05 and :35 via `ig-outbox/` staging plus a 30-minute operator cron. The queue maintainer targets a seed of at least 24 pending clips and keeps cutting whenever pending drops below 12. Daily cap is 48 posts.
 
 ## Consequences
 

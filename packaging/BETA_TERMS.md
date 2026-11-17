@@ -21,7 +21,7 @@ of the ClipForge Proprietary License (LICENSE).
    gate exists to stop that, but the final responsibility is yours.
 6. **Feedback helps.** Bug reports, log excerpts, and suggestions
    are welcome and may be used to improve ClipForge.
-7. **Revocation.** Abel may revoke a key for breach of these terms.
+7. **Revocation.** I may revoke a key for breach of these terms.
    On revocation or expiry, delete your copy.
 
 Acceptance: the installer shows this file and the LICENSE, and

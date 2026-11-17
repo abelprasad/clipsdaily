@@ -148,7 +148,7 @@ fails. Nothing about the script, voice, timings, bill math or CTA changes.
 Unslop's motion rules ("one ease-out curve", "no looping motion", "no
 parallax", "bouncy springs → one ease-out") are written for UI chrome:
 buttons, cards, menus, things a person operates. A 46-second reel is not
-chrome. The motion IS the content, and Abel explicitly asked for
+chrome. The motion IS the content, and I explicitly asked for
 animator-quality springs and overshoot. Flattening the reel to one ease-out
 curve would satisfy a UI rule by deleting the product.
 

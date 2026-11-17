@@ -1,7 +1,7 @@
 # Restart clipsdaily from scratch
 
 This is the full restart guide for the clipsdaily pipeline. It is written
-so a stranger (or a future Abel) can rebuild the whole system on a fresh
+so a stranger (or future me) can rebuild the whole system on a fresh
 server without asking anyone anything. It covers the live pipeline, the
 ClipForge package, and the ClipForge ads.
 
@@ -91,7 +91,7 @@ restart must fix them or work around them.
 
 | Item | State at shutdown |
 |---|---|
-| TikTok auto-posting | **Blocked account-wide since Nov 15.** Cookie path dead ("no confirmation" on every post). Manual phone post works, proving the account is fine. The official API route is built but off; it needs Abel's developer sign-in + review + audit. |
+| TikTok auto-posting | **Blocked account-wide since Nov 15.** Cookie path dead ("no confirmation" on every post). Manual phone post works, proving the account is fine. The official API route is built but off; it needs my developer sign-in + review + audit. |
 | YouTube uploads | **OAuth client DISABLED.** Uploads fail with `disabled_client: The OAuth client was disabled.` Last successful Short Nov 16, 21:00. Fix: re-enable the OAuth client in Google Cloud Console (disabled_client is not a token-expiry problem; a token refresh does nothing). |
 | Instagram | **Flagged Nov 17 for unoriginal content.** "This content may not be original to you" — profile and content not recommended to non-followers (no Explore, Reels tab, or suggested posts). Followers still see posts. Recovery needs most posts in a rolling 30-day window to be original; deleting/archiving does NOT fix it. See [Instagram originality](#instagram-originality-read-this-before-restarting). |
 | IG login to indra | **Never tested.** The indra poster (`ig_post_staged.py` + systemd timer) is built and dry-run verified, but no login was ever completed, so it has no session. The VM `instagram-cli` route kept posting in the meantime. |
@@ -444,7 +444,7 @@ npm run retention-check   # heuristic pre-post check -> docs/retention-v6.txt
 
 - A new variant = edit `src/script.json`, then `npm run voiceover` +
   `npm run render`. Voice is Kokoro `af_heart` at speed 1.1 (AI voice
-  only, never Abel's voice), in `.venv-kokoro/` (torch CPU,
+  only, never my voice), in `.venv-kokoro/` (torch CPU,
   `misaki[en]`, spaCy `en_core_web_sm`, espeak-ng).
 - v1–v5 are the receipt format (hook → on-screen bill math → cheaper
   alternative → comment-keyword CTA). v6 is the animated-explainer
@@ -459,7 +459,7 @@ npm run retention-check   # heuristic pre-post check -> docs/retention-v6.txt
   paths, queue internals, or cutter/ranking logic. Architecture
   diagrams are allowed ONLY at outcome level: named stages (Watcher,
   Cutter, Ranker, Poster), no code/paths/config/thresholds/weights.
-- Ads are NOT posted automatically. Abel eyeballs every ad before it
+- Ads are NOT posted automatically. I eyeball every ad before it
   goes out. No ad version has been posted yet (v1–v6 rendered, none
   live as of Nov 17, 2026).
 

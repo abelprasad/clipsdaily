@@ -1,4 +1,4 @@
-# YouTube VOD mode — notes for when live mode is done (Abel: live first, YouTube after)
+# YouTube VOD mode — notes for when live mode is done (my call: live first, YouTube after)
 
 ## Source reel: Oliver Merrick, "THE CLIP MACHINE" (reel DbVKVz0y8xo, Jul 28, 2026)
 - Editing is the easy part. Choosing the moment is the hard part.
@@ -13,4 +13,4 @@
 
 ## Do NOT build this yet
 - Live Twitch/Kick/YouTube Live mode comes first, complete and tested.
-- youtube_vod.py is manual-trigger (`youtube_vod.py <url>`) at first, auto mode only if Abel approves a channel list later.
+- youtube_vod.py is manual-trigger (`youtube_vod.py <url>`) at first, auto mode only if I approve a channel list later.

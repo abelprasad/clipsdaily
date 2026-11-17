@@ -38,4 +38,4 @@ to the clips rule — ads need them, most viewers watch muted).
 - The format constrains variants: a new ad is a new `script.json`
   (same beats, different words/numbers), not a new composition.
 - No ad version has been posted yet (v1–v6 rendered, none live as of
-  Nov 17, 2026). Abel eyeballs every ad before it goes out.
+  Nov 17, 2026). I eyeball every ad before it goes out.

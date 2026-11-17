@@ -8,7 +8,7 @@ Accepted. 2026-11-17.
 
 The queue was nearly all throwbacks: the maintainer cut chat-spike
 moments from old VODs, and the 28 pending entries were all throwbacks
-with only 2 live clips. Abel's direction was "don't just do throwbacks,
+with only 2 live clips. My direction was "don't just do throwbacks,
 it should be famous clips" — the clips posted should be moments people
 already know, not random slices of old streams. The throwback source
 ranks moments by chat intensity, which finds loud moments but says
@@ -38,7 +38,7 @@ guard). Manual run: `python3 queue_seed.py --seed-famous N`.
 
 - The queue's front is now recognizable moments (first batch: jynxzi
   "kiss on the lips" 2.3M views, kaicenat "Kevin Hart gets drenched"
-  2.7M views, and 6 more), which is what Abel asked for.
+  2.7M views, and 6 more), which is what I asked for.
 - Supply is bounded: top 30 per channel is ~240 clips, ~5 days at full
   post rate; when exhausted the queue falls back to throwbacks until new
   clips crack the top 30. Raising `FAMOUS_PER_FETCH` extends it.

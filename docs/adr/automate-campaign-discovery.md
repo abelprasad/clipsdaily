@@ -17,4 +17,4 @@ Content Rewards has ~780 live campaigns, and checking them by hand every day doe
 - The watcher parses undocumented Next.js HTML. If Content Rewards changes structure, parsing returns 0 records and it fails closed (no joins) — but someone must notice the 0-parse.
 - 0 joins is a correct outcome when nothing qualifies (verified on the live discover page: 25 records parsed, Speed present at $1/1K with $7,500.71 available, 0 join requests, 19 needs_review, 6 skipped/known).
 - Campaign cuts go to `campaign_queue.json`, never to the hourly `queue.json`, and are gated by the eligibility gate before posting.
-- Known gap: the hourly poster does NOT yet prefer `campaign_queue.json` when a campaign is active, so campaign cuts would sit unposted until that wiring lands. That wiring needs Abel's go.
+- Known gap: the hourly poster does NOT yet prefer `campaign_queue.json` when a campaign is active, so campaign cuts would sit unposted until that wiring lands. That wiring needs my go.

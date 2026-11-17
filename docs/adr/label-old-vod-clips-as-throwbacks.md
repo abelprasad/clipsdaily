@@ -6,7 +6,7 @@ Accepted — 2026-11-15
 
 ## Context
 
-Clips cut from past VODs are old footage. Viewers and the algorithm treat old footage as stale unless it is framed as a throwback. Abel's style references showed the opposite can be true: an old stream moment (AMP benching Kai for bad 2K performance) doing 695,500 plays. He decided the framing on the spot: label old-VOD clips as throwback.
+Clips cut from past VODs are old footage. Viewers and the algorithm treat old footage as stale unless it is framed as a throwback. the style references I sent showed the opposite can be true: an old stream moment (AMP benching Kai for bad 2K performance) doing 695,500 plays. I decided the framing on the spot: label old-VOD clips as throwback.
 
 ## Decision
 

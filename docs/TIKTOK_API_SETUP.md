@@ -1,4 +1,4 @@
-# TikTok Content Posting API — setup checklist for Abel
+# TikTok Content Posting API — setup checklist for me
 
 **Status: code is built, tested with mocks, and wired in. Nothing is
 live yet.** The TikTok leg still runs on the Playwright cookie session

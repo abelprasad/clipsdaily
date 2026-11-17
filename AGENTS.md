@@ -31,7 +31,7 @@ an explicit go. Never touch the live dir.
    same clip+platform twice; never submit more than 30 min
    after posting.** Complete only with a dashboard submission ID.
 7. **Credit the streamer in every post.** Clipsdaily accounts
-   only, never Abel's personal accounts.
+   only, never my personal accounts.
 8. **No credentials in the repo, ever.** `.auth/` is gitignored.
 9. **Never run `restart_maintainer.py`** (stale, wipes queue).
 10. **Long ffmpeg jobs run detached** (nohup/tmux), never over a

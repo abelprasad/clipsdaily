@@ -6,7 +6,7 @@ Accepted — 2026-11-15
 
 ## Context
 
-Post captions had grown long: a throwback line with a date, the moment phrase, a `clipsdaily • <streamer>` credit line, three or four hashtags (`#clipsdaily #throwback #<streamer> #twitchclips`), and a boilerplate closing line ("Best stream moments, clipped daily. Credit to the streamer in every post."). Abel asked to cut the captions down more and whether hashtags help.
+Post captions had grown long: a throwback line with a date, the moment phrase, a `clipsdaily • <streamer>` credit line, three or four hashtags (`#clipsdaily #throwback #<streamer> #twitchclips`), and a boilerplate closing line ("Best stream moments, clipped daily. Credit to the streamer in every post."). I asked to cut the captions down more and whether hashtags help.
 
 ## Decision
 

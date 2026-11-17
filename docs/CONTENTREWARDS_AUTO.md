@@ -1,14 +1,14 @@
 # Content Rewards browser automation — ClipForge (OPT-IN)
 
 This module (`src/clipsdaily/contentrewards.py`, Playwright) replaces the
-three Friday/browser touchpoints of the money loop with on-box automation:
+three manual browser touchpoints of the money loop with on-box automation:
 
 | Command | Replaces | What it does |
 |---|---|---|
 | `contentrewards auth` | Manual login | Guided headed login; saves only the Playwright storage state |
-| `contentrewards join` | Friday clicks Join | Clicks Join per `join_requests.json`, verifies the green Joined badge, appends `join_results.json` |
-| `contentrewards submit` | Friday browser submit | Submits pending `submit-outbox/` jobs, verifies the dashboard shows Pending WITH a submission ID, marks submitted |
-| `contentrewards earnings-dump` | Friday dashboard dump | Scrapes the submissions dashboard to `earnings_dump.json` (then run `earnings.py --update`) |
+| `contentrewards join` | I click Join | Clicks Join per `join_requests.json`, verifies the green Joined badge, appends `join_results.json` |
+| `contentrewards submit` | browser submit by hand | Submits pending `submit-outbox/` jobs, verifies the dashboard shows Pending WITH a submission ID, marks submitted |
+| `contentrewards earnings-dump` | dashboard dump by hand | Scrapes the submissions dashboard to `earnings_dump.json` (then run `earnings.py --update`) |
 
 Standalone usage (the `clipforge` CLI wires these in later):
 

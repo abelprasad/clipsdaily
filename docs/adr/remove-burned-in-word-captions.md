@@ -6,7 +6,7 @@ Accepted — 2026-11-15
 
 ## Context
 
-On the morning of Nov 15, 2026, clips burned Whisper word captions into the video. Abel viewed the first live TikTok Japan clip on his phone and said "it's captioned weird". The defects: the captions were enormous (they filled the whole frame, ran off the edges, and covered Speed's face in six lines of black boxes); the credit overlay read literally "clipsdaily u2022 ishowspeed" (a double-escaped bullet in `cutter.py`); and Whisper mistranscribed lines ("TOOSIN' THE WINNER", "You going to whole co-op!" for Hong Kong). The first fix (smaller font, outline instead of boxes, word-timestamp chunks, a correction map) helped, but Abel then decided the word captions should go entirely: "we don't need captions, we just need one big caption in the start of the clip where it's sorta clickbaity and interesting".
+On the morning of Nov 15, 2026, clips burned Whisper word captions into the video. I viewed the first live TikTok Japan clip on my phone and said "it's captioned weird". The defects: the captions were enormous (they filled the whole frame, ran off the edges, and covered Speed's face in six lines of black boxes); the credit overlay read literally "clipsdaily u2022 ishowspeed" (a double-escaped bullet in `cutter.py`); and Whisper mistranscribed lines ("TOOSIN' THE WINNER", "You going to whole co-op!" for Hong Kong). The first fix (smaller font, outline instead of boxes, word-timestamp chunks, a correction map) helped, but I then decided the word captions should go entirely: "we don't need captions, we just need one big caption in the start of the clip where it's sorta clickbaity and interesting".
 
 ## Decision
 

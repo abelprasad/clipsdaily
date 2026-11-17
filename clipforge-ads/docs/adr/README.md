@@ -12,4 +12,4 @@ the old one.
 | # | Decision | Status | Date |
 |---|----------|--------|------|
 | 001 | [Use the receipt-reel ad format](use-the-receipt-reel-ad-format.md) | Accepted | 2026-11-16 |
-| 002 | [Use Kokoro AI voiceover, never Abel's voice](use-kokoro-ai-voiceover-never-abels-voice.md) | Accepted | 2026-11-16 |
+| 002 | [Use Kokoro AI voiceover, never my voice](use-kokoro-ai-voiceover-never-my-voice.md) | Accepted | 2026-11-16 |

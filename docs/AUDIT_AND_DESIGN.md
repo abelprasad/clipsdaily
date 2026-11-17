@@ -2,26 +2,26 @@
 
 Working brand: **ClipForge** (slug `clipforge`). The live system stays **ClipsDaily**
 (`/home/abel/clipsdaily/`, its tmux sessions, its crons) until the package ships and
-Abel says to switch. The Python package stays `clipsdaily` internally; all
+I say to switch. The Python package stays `clipsdaily` internally; all
 user-facing surfaces (installer, dashboard, systemd units, docs, wizard) use the
 brand constant in `src/clipsdaily/branding.py` (`BRAND_NAME`, `BRAND_SLUG`). A full
-Python-package rename is a follow-up after Abel confirms the name.
+Python-package rename is a follow-up after I confirm the name.
 
 ## Phase 1 — audit: every component, where it runs, every touchpoint
 
 ### Component map
 
-| # | Component | Where it runs today | Trigger | Human / Friday touchpoint |
+| # | Component | Where it runs today | Trigger | Manual touchpoint |
 |---|---|---|---|---|
 | 1 | runner.py — live watch, record, chat spikes, cut, post | indra tmux `clipsdaily` | manual start | Start after reboot (tmux dies on reboot); config edit = manual restart; no config reload |
 | 2 | hourly_poster.py — YT 8 slots/day, TikTok, IG staging | indra tmux `clipsdaily-hourly` | manual start | Same reboot problem; hardcoded `/home/abel/clipsdaily` paths; never reads campaign_queue.json |
 | 3 | queue_seed.py — VOD throwback maintainer | indra tmux `clipsdaily-queue` | manual start | Same reboot problem; hardcoded paths; does NOT honor STOP; no retention on queue/clips |
-| 4 | watchdog.py — restarts dead sessions, health checks | indra systemd user service (abel) | boot (linger on) | Alert delivery is an operator-VM cron (Friday reads health-alerts.log, messages Abel) |
+| 4 | watchdog.py — restarts dead sessions, health checks | indra systemd user service (abel) | boot (linger on) | Alert delivery is an operator-VM cron (my agent reads health-alerts.log and messages me) |
 | 5 | IG posting | OPERATOR VM cron every 30 min (ig-post-staged.sh + instagram-cli) | cron | **Biggest external dependency**: instagram-cli exists only on the operator VM (glibc 2.39 + privsep socket); instagrapi login on indra is BROKEN (see below) |
-| 6 | auto-submit scan + submit | operator VM cron 15 min (submit_cron.sh) + Friday browser submit | cron | **Browser submit is Friday by hand**; submit window is 30 min from post |
-| 7 | campaign watch + join | operator VM cron daily (watcher on indra + Friday browser join) | cron | **Join click is Friday by hand** |
-| 8 | earnings | operator VM cron daily (Friday browser dump + earnings.py) | cron | **Dashboard dump is Friday by hand** |
-| 9 | watchdog alerts | operator VM cron 30 min | cron | Friday is the messenger |
+| 6 | auto-submit scan + submit | operator VM cron 15 min (submit_cron.sh) + a browser submit by hand | cron | **Browser submit is by hand**; submit window is 30 min from post |
+| 7 | campaign watch + join | operator VM cron daily (watcher on indra + a browser join by hand) | cron | **Join click is by hand** |
+| 8 | earnings | operator VM cron daily (a browser dump by hand + earnings.py) | cron | **Dashboard dump is by hand** |
+| 9 | watchdog alerts | operator VM cron 30 min | cron | my agent is the messenger |
 | 10 | cleanup.py | inside runner (startup + hourly) | automatic | Covers clips/ (posted 24h, unposted 48h), recordings backstop 48h, temps, logs 7d. Does NOT cover queue/clips (1.1G, 134 files, never deleted), queue/work (291M), ig-outbox (97M, 12 dirs), vod/ (5.8G) |
 | 11 | code updates | manual | human | Live files edited directly; sync_repo.py copies live→repo by hand; deploy.sh exists but never run; live still runs flat `python3 *.py`, not the `clipsdaily` CLI |
 | 12 | credentials | .auth/ (0700) on indra | human | YouTube OAuth auto-refresh works (token refreshed Nov 16 18:00). TikTok cookies valid to May 2027 but the cookie upload path is BLOCKED by TikTok throttle. TikTok API built, no dev app yet. IG has no session file on indra at all |
@@ -77,7 +77,7 @@ Python-package rename is a follow-up after Abel confirms the name.
 
 ## Phase 2 — design
 
-### Layout (single host, customer's box, no Friday VM)
+### Layout (single host, customer's box, no agent VM)
 
 ```
 ~/clipforge/                      # runtime home (default; $CLIPFORGE_HOME overrides)
@@ -221,12 +221,12 @@ degrade to "that leg paused + health.json flags it" — the core loop never stop
   API end-to-end post, Content Rewards join/submit/earnings, YouTube OAuth in
   Production mode. All are documented as manual verification steps, not faked.
 - Dashboard auth beyond localhost (token) if remote access is ever enabled.
-- A full Python-package rename (clipsdaily → clipforge) if Abel confirms the name.
+- A full Python-package rename (clipsdaily → clipforge) if I confirm the name.
   (Name is confirmed; the internal package stays `clipsdaily` — renaming
   every import was not worth the churn. The product, CLI, and services are
   ClipForge via `branding.py`.)
 
-## IP protection (added Nov 16, 2026 — Abel: "we have to make sure no one steals this")
+## IP protection (added Nov 16, 2026 — I said: "we have to make sure no one steals this")
 
 1. **Proprietary license.** The ClipForge distribution ships under
    `packaging/LICENSE` (no redistribution, no resale, no sublicensing)
@@ -237,7 +237,7 @@ degrade to "that leg paused + health.json flags it" — the core loop never stop
    MIT carriers found in the repo: root `LICENSE` (MIT) + pyproject
    `license = "MIT"`. The package's pyproject now says
    `Proprietary — see LICENSE` and the installer ships the proprietary
-   LICENSE. RESOLVED Nov 16, 2026 (Abel approved the relicense): the
+   LICENSE. RESOLVED Nov 16, 2026 (I approved the relicense): the
    repo-root `LICENSE` is now the ClipForge Proprietary License, so the
    repository's own software is proprietary as published. The only
    MIT-licensed code in the repo is the vendored third-party skill

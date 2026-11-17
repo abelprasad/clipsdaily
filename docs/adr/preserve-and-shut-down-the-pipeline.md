@@ -6,12 +6,12 @@ Accepted. 2026-11-17.
 
 ## Context
 
-By Nov 17, 2026 every leg of the pipeline was fighting Abel at once:
+By Nov 17, 2026 every leg of the pipeline was fighting me at once:
 TikTok auto-posting blocked account-wide since Nov 15, YouTube OAuth
 client disabled, Instagram posting stalled overnight on per-run
 approvals, and then Instagram flagged `@clippedaily31` for unoriginal
 content (recommendations to non-followers off). The famous-clips change
-shipped the same morning likely accelerated the flag. Abel's call was
+shipped the same morning likely accelerated the flag. My call was
 "let's kill it all, I'm tired of this" — shut the pipeline down, but
 preserve everything first so it can be restarted later.
 
@@ -27,8 +27,8 @@ means: reconcile the live code into the repo, add the live-only files
 units), write a comprehensive restart guide (`docs/RESTART.md`), record
 the shutdown state and the Instagram originality findings, and verify
 the push with a clean clone. Nothing is deleted in this step: the live
-dir, the operator-VM crons, and the systemd units stay until Abel
-verifies the push himself, and the removal list is recorded in the
+dir, the operator-VM crons, and the systemd units stay until I
+verify the push myself, and the removal list is recorded in the
 shutdown report. Live state, media, and credentials are deliberately
 NOT preserved in the repo (`.gitignore`); the restart guide records
 what they were and how to rebuild them.

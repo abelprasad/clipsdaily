@@ -8,7 +8,7 @@ Accepted. 2026-11-17.
 
 Instagram posting ran from the operator VM via `instagram-cli`, and
 every run needed a one-time runtime approval. Overnight runs timed out
-while Abel slept (02:05, 02:37, 04:36, 07:05 on Nov 17), so no clips
+while I slept (02:05, 02:37, 04:36, 07:05 on Nov 17), so no clips
 posted for hours. A durable schedule-scoped grant could not be
 pre-approved — the connector method refuses pre-approval. The
 operator-VM route also depends on a browser session the operator VM
