@@ -1,6 +1,6 @@
 """Content Rewards browser automation for ClipForge (OPT-IN ONLY).
 
-Replaces the three Friday/browser touchpoints of the money loop with
+Replaces the three manual browser touchpoints of the money loop with
 on-box Playwright automation:
 
   1. join    -- click Join on requested campaigns, verify the Joined badge
