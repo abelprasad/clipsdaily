@@ -1,0 +1,10 @@
+[Unit]
+Description=ClipForge disk cleanup (hourly)
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+Unit=clipforge-cleanup.service
+
+[Install]
+WantedBy=timers.target

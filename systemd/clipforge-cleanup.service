@@ -1,0 +1,12 @@
+# ClipForge disk cleanup (oneshot, run by the .timer hourly) —
+# retention rules in docs/AUDIT_AND_DESIGN.md; never deletes pending
+# or partial queue entries or staged IG clips.
+[Unit]
+Description=ClipForge disk cleanup (oneshot)
+
+[Service]
+Type=oneshot
+WorkingDirectory=@CLIPFORGE_HOME@
+Environment=CLIPFORGE_HOME=@CLIPFORGE_HOME@
+Environment=PATH=@CLIPFORGE_VENV@/bin:/usr/local/sbin:/usr/local/bin:/usr/bin:/bin:@CLIPFORGE_HOME@/.local/bin
+ExecStart=@CLIPFORGE_VENV@/bin/clipforge cleanup

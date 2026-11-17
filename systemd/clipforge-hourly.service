@@ -1,0 +1,18 @@
+# ClipForge hourly poster — posts the next queue clip to YouTube /
+# TikTok on the :00/:30 slots and stages Instagram Reels.
+[Unit]
+Description=ClipForge hourly poster
+After=network-online.target clipforge-runner.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=@CLIPFORGE_HOME@
+Environment=CLIPFORGE_HOME=@CLIPFORGE_HOME@
+Environment=PATH=@CLIPFORGE_VENV@/bin:/usr/local/sbin:/usr/local/bin:/usr/bin:/bin:@CLIPFORGE_HOME@/.local/bin
+ExecStart=@CLIPFORGE_VENV@/bin/clipforge post hourly
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target

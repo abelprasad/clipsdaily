@@ -3,12 +3,12 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "clipsdaily"
+name = "clipforge"
 dynamic = ["version"]
-description = "Fully automatic Twitch/Kick/YouTube Live clip pipeline: record, cut, post."
-readme = "README.md"
+description = "ClipForge: fully automatic Twitch/Kick clip pipeline — record, cut, post. Zero intervention after one-time setup."
+readme = "packaging/README.md"
 requires-python = ">=3.10"
-license = "MIT"
+license = {text = "Proprietary — see LICENSE"}
 authors = [{name = "Abel Prasad", email = "abelprasad4@gmail.com"}]
 keywords = ["clips", "twitch", "kick", "youtube", "tiktok", "shorts"]
 classifiers = [
@@ -20,7 +20,7 @@ classifiers = [
 ]
 dependencies = [
     "streamlink==8.6.3",
-    "openai-whisper",
+    "faster-whisper==1.2.1",
     "instagrapi==3.1.0",
     "tiktok-uploader==1.2.0",
     "google-api-python-client==2.196.0",
@@ -31,15 +31,17 @@ dependencies = [
     "requests",
     "playwright",
     "gtts",
+    "cryptography>=42",  # license-key verification (Ed25519)
+    "yt-dlp",  # VOD downloads (chat.py falls back to PATH yt-dlp)
 ]
 
 [project.scripts]
 clipsdaily = "clipsdaily.cli:main"
+clipforge = "clipsdaily.cli:main"
 
-[project.urls]
-Homepage = "https://github.com/abelprasad/clipsdaily"
-Repository = "https://github.com/abelprasad/clipsdaily"
-Issues = "https://github.com/abelprasad/clipsdaily/issues"
+# No public URLs: ClipForge is proprietary and private (see README).
+# The release channel (update_channel in config.yaml) is a private
+# repo, set by the vendor when one exists.
 
 [tool.setuptools.dynamic]
 version = {attr = "clipsdaily.__version__"}

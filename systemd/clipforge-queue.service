@@ -1,0 +1,18 @@
+# ClipForge queue maintainer — keeps the pending queue seeded from
+# past VODs (Twitch) so there is always a clip ready to post.
+[Unit]
+Description=ClipForge queue maintainer
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=@CLIPFORGE_HOME@
+Environment=CLIPFORGE_HOME=@CLIPFORGE_HOME@
+Environment=PATH=@CLIPFORGE_VENV@/bin:/usr/local/sbin:/usr/local/bin:/usr/bin:/bin:@CLIPFORGE_HOME@/.local/bin
+ExecStart=@CLIPFORGE_VENV@/bin/clipforge queue maintain
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target

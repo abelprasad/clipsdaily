@@ -91,6 +91,14 @@ def ensure_session(name, proc=None, start=None):
     alive, detail = session_alive(name)
     if alive:
         return "alive", detail
+    # Auth-dead marker (written by a worker whose session died, e.g.
+    # the IG worker): restarting cannot fix it — report failed and
+    # wait for a human to re-auth. The auth flow clears the marker.
+    marker = os.path.join(LOGS, name + ".auth-dead")
+    if os.path.exists(marker):
+        log("WATCHDOG %s not active, auth-dead marker present; "
+            "NOT restarting (re-auth needed)" % name)
+        return "failed", "auth dead (see %s)" % marker
     log("WATCHDOG %s not active: %s; restarting" % (name, detail))
     rc, _, err = run(["systemctl", "--user", "restart", name])
     if rc != 0:

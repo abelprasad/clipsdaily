@@ -1,0 +1,19 @@
+# ClipForge watchdog — restarts dead units every 60s and writes
+# health.json every 30 min. Alerts are delivered by the notifier
+# configured in config.yaml (none/email/discord).
+[Unit]
+Description=ClipForge watchdog (self-healing + health checks)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=@CLIPFORGE_HOME@
+Environment=CLIPFORGE_HOME=@CLIPFORGE_HOME@
+Environment=PATH=@CLIPFORGE_VENV@/bin:/usr/local/sbin:/usr/local/bin:/usr/bin:/bin:@CLIPFORGE_HOME@/.local/bin
+ExecStart=@CLIPFORGE_VENV@/bin/clipforge watchdog
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target

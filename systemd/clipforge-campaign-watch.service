@@ -1,0 +1,12 @@
+# ClipForge campaign watcher (oneshot, run by the .timer daily) —
+# discovers Content Rewards campaigns and joins the ones that match.
+# Does nothing when campaign_automation is off.
+[Unit]
+Description=ClipForge campaign watcher (oneshot)
+
+[Service]
+Type=oneshot
+WorkingDirectory=@CLIPFORGE_HOME@
+Environment=CLIPFORGE_HOME=@CLIPFORGE_HOME@
+Environment=PATH=@CLIPFORGE_VENV@/bin:/usr/local/sbin:/usr/local/bin:/usr/bin:/bin:@CLIPFORGE_HOME@/.local/bin
+ExecStart=@CLIPFORGE_VENV@/bin/clipforge campaign watch --check

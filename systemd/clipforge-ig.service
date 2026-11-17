@@ -1,0 +1,21 @@
+# ClipForge Instagram worker — posts staged Reels from ig-outbox/.
+# Restart=on-failure (NOT always): when the IG session dies the
+# worker writes logs/clipforge-ig.auth-dead and exits 0 so systemd
+# does NOT hot-loop it; the watchdog reports it failed and alerts,
+# and re-auth clears the marker.
+[Unit]
+Description=ClipForge Instagram worker
+After=network-online.target clipforge-hourly.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=@CLIPFORGE_HOME@
+Environment=CLIPFORGE_HOME=@CLIPFORGE_HOME@
+Environment=PATH=@CLIPFORGE_VENV@/bin:/usr/local/sbin:/usr/local/bin:/usr/bin:/bin:@CLIPFORGE_HOME@/.local/bin
+ExecStart=@CLIPFORGE_VENV@/bin/clipforge ig
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target

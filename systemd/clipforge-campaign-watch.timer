@@ -1,0 +1,10 @@
+[Unit]
+Description=ClipForge campaign watcher (daily)
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+Unit=clipforge-campaign-watch.service
+
+[Install]
+WantedBy=timers.target

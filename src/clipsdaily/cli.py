@@ -1,23 +1,31 @@
-"""clipsdaily command-line interface.
+"""ClipForge command-line interface.
 
 Thin entry layer over the pipeline modules in this package. Each
-subcommand lazily imports the module it wraps, so `clipsdaily --help`
+subcommand lazily imports the module it wraps, so `clipforge --help`
 stays fast and never pulls in torch/whisper/playwright.
 
-Runtime state lives in the runtime home: $CLIPSDAILY_HOME when set,
-else the current working directory (see clipsdaily.paths). Run the CLI
-from the runtime home (e.g. /home/abel/clipsdaily on indra), or pass
---home. Never point it at the repo checkout: the repo is the dev copy
-and holds no live state.
+Runtime state lives in the runtime home: $CLIPFORGE_HOME when set,
+else $CLIPSDAILY_HOME (back-compat), else the current working
+directory (see clipsdaily.paths). Run the CLI from the runtime home
+(e.g. ~/clipforge), or pass --home. Never point it at the repo
+checkout: the repo is the dev copy and holds no live state.
 
 Subcommands:
+  setup     one-time setup wizard (config, accounts, auth, units)
+  status    one-screen health + queue summary
   run       live runner (record + chat spikes + cut + post)
   post      post clips (now / one / hourly)
+  ig        Instagram worker (post staged Reels from ig-outbox/)
+  watchdog  self-healing watchdog loop (restarts dead units)
+  dashboard local web GUI (127.0.0.1:8787)
+  cleanup   one disk-cleanup pass (retention rules)
   queue     queue status / maintainer / seed
   campaign  campaign watch / cut
   submit    auto-submit outbox (scan / list-pending / mark-*)
   earnings  earnings summary / update
-  auth      auth setup (youtube / tiktok / instagram) and auth check
+  update    auto-update with rollback (opt-in)
+  auth      auth setup (youtube / tiktok / instagram / contentrewards)
+            and auth check
 
 Every module in this package also runs directly:
   python -m clipsdaily.runner
@@ -34,6 +42,151 @@ from . import __version__
 
 def _set_argv(prog, *args):
     sys.argv = [prog, *args]
+
+
+def _cmd_license(args):
+    from . import license as lic
+    from .paths import runtime_home
+
+    home = runtime_home()
+    if args.action == "status":
+        ok, detail = lic.key_status(home)
+        print(detail)
+        return 0 if ok else 1
+    if args.action == "check":
+        if args.key_file:
+            try:
+                key_str = open(args.key_file).read().strip()
+            except OSError as e:
+                print("license INVALID: cannot read %s: %s"
+                      % (args.key_file, e))
+                return 1
+        else:
+            key_file = home / ".auth" / lic.KEY_FILE_NAME
+            if not key_file.exists():
+                print("license INVALID: no key installed (%s missing)"
+                      % key_file)
+                return 1
+            key_str = key_file.read_text().strip()
+        pub = None
+        if args.public_key:
+            pub = open(args.public_key).read()
+        res = lic.verify_key(key_str, public_key_pem=pub)
+        if res["valid"]:
+            print("license OK: %s (key %s, tier %s, expires %s)"
+                  % (res["email"], res["kid"], res["tier"], res["expires"]))
+            return 0
+        print("license INVALID: %s" % res["error"])
+        return 1
+
+
+def _cmd_setup(args):
+    from . import setup
+
+    return setup.main(["--yes"] if args.yes else [])
+
+
+def _cmd_status(args):
+    """One-screen status: units, health.json, queue, kill switch."""
+    import json
+    import subprocess
+
+    from .branding import BRAND_NAME, BRAND_SLUG
+    from .paths import runtime_home
+
+    home = runtime_home()
+    print("%s status — %s" % (BRAND_NAME, home))
+    units = ["%s-runner" % BRAND_SLUG, "%s-hourly" % BRAND_SLUG,
+             "%s-queue" % BRAND_SLUG, "%s-ig" % BRAND_SLUG,
+             "%s-watchdog" % BRAND_SLUG, "%s-dashboard" % BRAND_SLUG]
+    bad = 0
+    for unit in units:
+        r = subprocess.run(["systemctl", "--user", "is-active", unit],
+                           capture_output=True, text=True)
+        state = r.stdout.strip() or "unknown"
+        if state != "active":
+            bad += 1
+        print("  %-22s %s" % (unit, state))
+    health_file = home / "health.json"
+    if health_file.exists():
+        try:
+            health = json.loads(health_file.read_text())
+            print("  health.json checked_at %s" % health.get("checked_at"))
+            for key, val in health.items():
+                if key == "checked_at":
+                    continue
+                if isinstance(val, dict):
+                    print("  %-14s %s — %s" % (
+                        key, val.get("status", "?"),
+                        val.get("detail", "")[:80]))
+        except Exception as e:
+            print("  health.json unreadable: %s" % e)
+    else:
+        print("  health.json: not written yet (watchdog runs every 30 min)")
+    try:
+        from . import queue_seed
+        entries = queue_seed.load_queue()
+        by_status = {}
+        for e in entries:
+            by_status[e.get("status", "?")] = \
+                by_status.get(e.get("status", "?"), 0) + 1
+        print("  queue: %d entries %s" % (len(entries), by_status))
+    except FileNotFoundError:
+        print("  queue: empty (no queue.json yet)")
+    except Exception as e:
+        print("  queue: unreadable: %s" % e)
+    print("  kill switch: %s" % (
+        "ACTIVE (STOP file present — posting paused)"
+        if (home / "STOP").exists() else "off"))
+    from . import license as lic
+    ok, detail = lic.key_status(home)
+    print("  %s" % detail)
+    print("  dashboard: http://127.0.0.1:8787")
+    return 1 if (bad or not ok) else 0
+
+
+def _cmd_ig(args):
+    from . import ig_poster
+
+    argv = []
+    if args.once:
+        argv.append("--once")
+    if args.dry_run:
+        argv.append("--dry-run")
+    return ig_poster.main(argv)
+
+
+def _cmd_watchdog(args):
+    from . import watchdog
+
+    _set_argv("watchdog.py")
+    return watchdog.main()
+
+
+def _cmd_dashboard(args):
+    from . import dashboard
+
+    return dashboard.main()
+
+
+def _cmd_cleanup(args):
+    from . import cleanup
+
+    cleanup.run_cleanup()
+    return 0
+
+
+def _cmd_update(args):
+    from . import update
+
+    argv = []
+    if args.check:
+        argv.append("--check")
+    if args.to:
+        argv += ["--to", args.to]
+    if args.rollback:
+        argv.append("--rollback")
+    return update.main(argv)
 
 
 def _cmd_run(args):
@@ -171,7 +324,12 @@ def _cmd_auth(args):
     elif args.target == "instagram":
         from . import auth_instagram
 
-        auth_instagram.main()
+        auth_instagram.main(
+            ["--cookies", args.cookies] if args.cookies else [])
+    elif args.target == "contentrewards":
+        from . import contentrewards
+
+        contentrewards.main(["auth"])
     elif args.target == "check":
         from . import poster
 
@@ -180,14 +338,58 @@ def _cmd_auth(args):
 
 def build_parser():
     p = argparse.ArgumentParser(
-        prog="clipsdaily",
-        description="Fully automatic stream clip pipeline: record, cut, post.",
+        prog="clipforge",
+        description="ClipForge: fully automatic stream clip pipeline — "
+                    "record, cut, post. Zero intervention after setup.",
     )
     p.add_argument("--version", action="version",
                    version=f"%(prog)s {__version__}")
     p.add_argument("--home", metavar="DIR",
-                   help="runtime home (default: $CLIPSDAILY_HOME or cwd)")
+                   help="runtime home (default: $CLIPFORGE_HOME or cwd)")
     sub = p.add_subparsers(dest="command", metavar="COMMAND")
+
+    p_license = sub.add_parser("license", help="license key status / check")
+    lic_sub = p_license.add_subparsers(dest="action", metavar="ACTION")
+    l_status = lic_sub.add_parser("status", help="show installed key status")
+    l_status.set_defaults(func=_cmd_license)
+    l_check = lic_sub.add_parser("check", help="verify a key (exit 0 = valid)")
+    l_check.add_argument("--key-file", metavar="FILE",
+                         help="key file to check (default: installed key)")
+    l_check.add_argument("--public-key", metavar="PEM",
+                         help="override public key (test-only / rotation)")
+    l_check.set_defaults(func=_cmd_license)
+
+    p_setup = sub.add_parser("setup", help="one-time setup wizard")
+    p_setup.add_argument("--yes", action="store_true",
+                         help="non-interactive: defaults + env vars")
+    p_setup.set_defaults(func=_cmd_setup)
+
+    p_status = sub.add_parser("status", help="one-screen health + queue summary")
+    p_status.set_defaults(func=_cmd_status)
+
+    p_ig = sub.add_parser("ig", help="Instagram worker (post staged Reels)")
+    p_ig.add_argument("--once", action="store_true",
+                      help="one pass, then exit")
+    p_ig.add_argument("--dry-run", action="store_true",
+                      help="validate + print, post nothing, write nothing")
+    p_ig.set_defaults(func=_cmd_ig)
+
+    p_wd = sub.add_parser("watchdog", help="self-healing watchdog loop")
+    p_wd.set_defaults(func=_cmd_watchdog)
+
+    p_dash = sub.add_parser("dashboard", help="local web GUI (127.0.0.1:8787)")
+    p_dash.set_defaults(func=_cmd_dashboard)
+
+    p_clean = sub.add_parser("cleanup", help="one disk-cleanup pass")
+    p_clean.set_defaults(func=_cmd_cleanup)
+
+    p_upd = sub.add_parser("update", help="auto-update with rollback (opt-in)")
+    p_upd.add_argument("--check", action="store_true",
+                       help="show current vs latest version")
+    p_upd.add_argument("--to", metavar="TAG", help="update to a specific tag")
+    p_upd.add_argument("--rollback", action="store_true",
+                       help="restore the previous version")
+    p_upd.set_defaults(func=_cmd_update)
 
     p_run = sub.add_parser("run", help="live runner (record + spikes + cut + post)")
     p_run.set_defaults(func=_cmd_run)
@@ -252,9 +454,15 @@ def build_parser():
     p_earn.set_defaults(func=_cmd_earnings)
 
     p_auth = sub.add_parser("auth", help="auth setup and checks")
-    p_auth.add_argument("target", choices=["youtube", "tiktok", "instagram", "check"],
-                        help="youtube/tiktok/instagram run the setup flow; "
-                        "check is the read-only poster auth check")
+    p_auth.add_argument("target",
+                        choices=["youtube", "tiktok", "instagram",
+                                 "contentrewards", "check"],
+                        help="youtube/tiktok/instagram/contentrewards run "
+                        "the setup flow; check is the read-only poster "
+                        "auth check")
+    p_auth.add_argument("--cookies", metavar="COOKIES.TXT",
+                        help="instagram: Netscape cookie export (session "
+                        "import, recommended)")
     p_auth.set_defaults(func=_cmd_auth)
 
     return p
@@ -264,11 +472,35 @@ def main(argv=None):
     parser = build_parser()
     args = parser.parse_args(argv)
     if args.home:
-        os.environ["CLIPSDAILY_HOME"] = args.home
+        os.environ["CLIPFORGE_HOME"] = args.home
     func = getattr(args, "func", None)
     if func is None:
         parser.print_help()
         return 2
+    # License gate (ClipForge product only): the installed `clipforge`
+    # CLI, and any invocation against a ClipForge runtime home (marker
+    # file present), requires a valid installed license key. The dev
+    # `clipsdaily` CLI against a non-product home is ungated. Ungated
+    # commands: license, status, --help, --version (they need to work
+    # so a user can see why they are blocked).
+    # This is a basic check — it stops a leaked copy from just running,
+    # it is not DRM against a determined reverse-engineer (see README).
+    command = getattr(args, "command", None)
+    if command not in (None, "license", "status"):
+        from .paths import runtime_home
+        home = runtime_home()
+        is_product = (os.path.basename(sys.argv[0]) == "clipforge"
+                      or (home / ".clipforge-home").exists())
+        if is_product:
+            from . import license as lic
+            ok, detail = lic.key_status(home)
+            if not ok:
+                print("ClipForge license required (%s): %s"
+                      % (home, detail), file=sys.stderr)
+                print("Install a key with the installer "
+                      "(./install.sh --license key.txt), or run from "
+                      "the runtime home.", file=sys.stderr)
+                return 2
     return func(args) or 0
 
 

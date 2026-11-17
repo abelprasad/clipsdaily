@@ -1,0 +1,10 @@
+[Unit]
+Description=ClipForge auto-submit scan (every 15 min)
+
+[Timer]
+OnCalendar=*:0/15
+Persistent=true
+Unit=clipforge-submit.service
+
+[Install]
+WantedBy=timers.target

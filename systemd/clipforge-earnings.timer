@@ -1,0 +1,10 @@
+[Unit]
+Description=ClipForge earnings dump (daily)
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+Unit=clipforge-earnings.service
+
+[Install]
+WantedBy=timers.target

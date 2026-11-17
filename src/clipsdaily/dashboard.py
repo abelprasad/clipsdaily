@@ -113,14 +113,16 @@ def validate_config(cfg):
         if key in seen:
             return "duplicate streamer: %s/%s" % (platform, channel)
         seen.add(key)
-    for key in ("max_clips_per_day", "spike_cooldown_seconds"):
-        if key in cfg and cfg[key] is not None:
-            if not isinstance(cfg[key], int) or isinstance(cfg[key], bool):
-                return "%s must be an integer" % key
-            if key == "max_clips_per_day" and not 1 <= cfg[key] <= 100:
-                return "max_clips_per_day must be 1-100"
-            if key == "spike_cooldown_seconds" and not 0 <= cfg[key] <= 3600:
-                return "spike_cooldown_seconds must be 0-3600"
+    # NOTE (IP protection, Nov 16, 2026): the dashboard deliberately
+    # does NOT validate or expose spike-tuning knobs (spike_cooldown_seconds,
+    # spike_threshold_multiplier, spike_min_messages, spike_window_seconds)
+    # or any other cutter internals. Those live in config.yaml only.
+    if "max_clips_per_day" in cfg and cfg["max_clips_per_day"] is not None:
+        if not isinstance(cfg["max_clips_per_day"], int) or isinstance(
+                cfg["max_clips_per_day"], bool):
+            return "max_clips_per_day must be an integer"
+        if not 1 <= cfg["max_clips_per_day"] <= 100:
+            return "max_clips_per_day must be 1-100"
     if cfg.get("queue_clip_retention_days") is not None:
         v = cfg["queue_clip_retention_days"]
         if not isinstance(v, int) or isinstance(v, bool) or not 0 <= v <= 90:
@@ -424,11 +426,10 @@ No delete or retry in v1.</p>
 <table><tr><th>Clip</th><th>Platform</th><th>Link</th><th>Time</th></tr>%s</table></section>
 <section id="settings"><h2>Settings</h2>
 <p>YouTube slot hours: %s (fixed in the hourly poster in v1; shown, not editable).
-Max clips/day and spike cooldown are read live by the runner.</p>
+Max clips/day is read live by the runner.</p>
 <p>Captions: %s</p>
 <form method="post" action="/api/settings">
 <label>Max clips per day <input type="number" name="max_clips_per_day" min="1" max="100" value="%s"></label><br>
-<label>Spike cooldown (seconds) <input type="number" name="spike_cooldown_seconds" min="0" max="3600" value="%s"></label><br>
 <label>Queue clip retention (days) <input type="number" name="queue_clip_retention_days" min="0" max="90" value="%s"></label><br>
 <label><input type="checkbox" name="platform_youtube" %s> YouTube posting</label><br>
 <label><input type="checkbox" name="platform_tiktok" %s> TikTok posting</label><br>
@@ -458,7 +459,6 @@ posting immediately; deleting it resumes. Recordings in progress are left alone.
         esc(", ".join("%02d:00" % h for h in yt_slots)),
         esc(CAPTION_RULE),
         esc(str(cfg.get("max_clips_per_day", ""))),
-        esc(str(cfg.get("spike_cooldown_seconds", ""))),
         esc("" if retention == "not set" else str(retention)),
         "checked" if platforms.get("youtube") else "",
         "checked" if platforms.get("tiktok") else "",
@@ -601,9 +601,9 @@ def create_app(home=None):
         try:
             if params.get("max_clips_per_day") not in (None, ""):
                 cfg["max_clips_per_day"] = int(params["max_clips_per_day"])
-            if params.get("spike_cooldown_seconds") not in (None, ""):
-                cfg["spike_cooldown_seconds"] = int(
-                    params["spike_cooldown_seconds"])
+            # IP protection: spike-tuning params are never accepted
+            # from the GUI (a stale form/bookmark sending one is ignored,
+            # not an error). See validate_config note above.
             if params.get("queue_clip_retention_days") not in (None, ""):
                 cfg["queue_clip_retention_days"] = int(
                     params["queue_clip_retention_days"])

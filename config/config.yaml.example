@@ -1,36 +1,39 @@
-# clipsdaily config — copy to config.yaml and edit.
-# Watchlist from Nov 15, 2026 (top-live sweep, English, clip-worthy).
+# ClipForge config — copy to config.yaml and edit (or run `clipforge setup`).
+# The setup wizard writes this file for you; hand-editing works too.
+# The runner re-reads this file every 60 seconds — no restart needed
+# for watchlist / platform / cap changes.
+#
 # Capacity: 8 concurrent recordings (8 cores, 11 GB RAM; Whisper on
 # CPU is the bottleneck, ~1 min per 30s clip). Do NOT exceed 8 on
-# launch day: more risks Whisper queue lag and disk fill. xqc is
-# watched on BOTH Twitch and Kick; the per-streamer cooldown is
-# shared, so the same moment never produces two clips.
-streamers:
-  - platform: twitch
-    channel: kaicenat
-  - platform: twitch
-    channel: ishowspeed
-  - platform: kick
-    channel: xqc
-  - platform: kick
-    channel: adinross
-  - platform: twitch
-    channel: sykkuno
-  - platform: twitch
-    channel: jynxzi
-  - platform: twitch
-    channel: stableronaldo
-  - platform: twitch
-    channel: zackrawrr
-  - platform: twitch
-    channel: hasanabi
-  - platform: twitch
-    channel: clix
+# launch day: more risks Whisper queue lag and disk fill. A streamer
+# watched on BOTH Twitch and Kick shares one cooldown, so the same
+# moment never produces two clips.
+
+# Your accounts. These are checked against the sessions/tokens you
+# create in `clipforge setup` — a mismatch refuses to post, so a
+# wrong login can never post to the wrong account.
+accounts:
+  instagram: ""        # e.g. myclips (username, no @)
+  instagram_user_id: ~ # numeric id; optional, only checked when set
+  youtube: ""          # e.g. @MyClips (handle)
+  youtube_title: ""    # channel title; optional
+  tiktok: ""           # e.g. myclips (username, no @)
+
+# Caption brand prefix: clips are captioned "<prefix> • <streamer>".
+# Default is the product brand (clipforge); set your own brand here.
+brand_caption_prefix: clipforge
+
+streamers: []
+  # Add entries like:
+  # - platform: twitch
+  #   channel: kaicenat
+  # - platform: kick
+  #   channel: adinross
 
 clip_length_seconds: 30
-spike_threshold_multiplier: 3.0
-spike_min_messages: 20          # per 10s window, floor before a spike counts
-spike_window_seconds: 10
+spike_threshold_multiplier: 3.0  # tuned; leave alone unless support says so
+spike_min_messages: 20          # tuned; leave alone unless support says so
+spike_window_seconds: 10        # tuned; leave alone unless support says so
 spike_cooldown_seconds: 300     # max 1 clip per streamer per 5 min
 max_clips_per_day: 20
 
@@ -41,10 +44,7 @@ output_width: 1080
 output_height: 1920
 
 # Posting destinations — ALL OFF by default. Turn a platform on ONLY
-# after its auth is wired and poster.py --check reports it OK.
-# Accounts: Instagram @clippedaily31, TikTok @clips.daily548,
-# YouTube Clips Daily @Clippedaily31. Never point this at a
-# personal account.
+# after its auth is wired and `clipforge auth check` reports it OK.
 platforms:
   instagram: false
   tiktok: false
@@ -54,7 +54,41 @@ platforms:
 # tiktok_api: false until the developer app is created, authorized,
 # and audited (see docs/TIKTOK_API_SETUP.md). Flip to true only then.
 # tiktok_api_mode: direct (publish straight to the profile) or draft
-# (lands in the creator inbox; Abel taps publish on his phone).
+# (lands in the creator inbox; tap publish on your phone).
 # Caps are enforced in code: ~15 Direct Posts/day, 5 pending drafts/24h.
 tiktok_api: false
 tiktok_api_mode: direct
+
+# Content Rewards campaign automation — OFF by default. When on, the
+# campaign watcher joins campaigns and the submitter files clips
+# automatically. Campaigns have a ONE-STRIKE rule: a wrong clip can
+# get the account banned from the program. Only turn this on after
+# reading docs/CONTENTREWARDS_AUTO.md.
+campaign_automation: false
+
+# Health alerts. channel: none (log only) | email | discord.
+# Email password comes ONLY from the CLIPFORGE_SMTP_PASS environment
+# variable — never put it in this file. Discord webhook URL goes in
+# notify.discord.webhook_url or CLIPFORGE_DISCORD_WEBHOOK.
+notify:
+  channel: none
+  email:
+    host: ""
+    port: 587
+    from: ""
+    to: ""
+    user: ""
+  discord:
+    webhook_url: ""
+
+# Disk cleanup retention (days). Cleanup never deletes pending or
+# partial queue entries, staged IG outbox clips, or chat JSONs.
+queue_clip_retention_days: 7
+ig_outbox_retention_days: 7
+vod_retention_days: 7
+
+# Auto-update — OFF by default. When on, `clipforge update` pulls
+# versioned releases from update_channel, runs the test suite, and
+# rolls back automatically on a failed health check.
+auto_update: false
+update_channel: ""   # git remote URL or path of the release repo

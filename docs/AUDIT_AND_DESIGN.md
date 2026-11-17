@@ -1,10 +1,11 @@
 # ClipForge packaging — audit + design (branch: packaging/zero-intervention)
 
-Brand: **ClipForge** (slug `clipforge`) — FINAL, name locked Nov 16, 2026. The live system stays **ClipsDaily**
+Working brand: **ClipForge** (slug `clipforge`). The live system stays **ClipsDaily**
 (`/home/abel/clipsdaily/`, its tmux sessions, its crons) until the package ships and
 Abel says to switch. The Python package stays `clipsdaily` internally; all
 user-facing surfaces (installer, dashboard, systemd units, docs, wizard) use the
-brand constant in `src/clipsdaily/branding.py` (`BRAND_NAME`, `BRAND_SLUG`). A full Python-package rename is a follow-up (deferred; name now confirmed, rename tracked separately).
+brand constant in `src/clipsdaily/branding.py` (`BRAND_NAME`, `BRAND_SLUG`). A full
+Python-package rename is a follow-up after Abel confirms the name.
 
 ## Phase 1 — audit: every component, where it runs, every touchpoint
 
@@ -65,11 +66,6 @@ brand constant in `src/clipsdaily/branding.py` (`BRAND_NAME`, `BRAND_SLUG`). A f
   recordings). Disk guard 50GB in runner. A customer box needs 500GB+ free
   recommended; installer warns below that and lowers default concurrency.
 - STOP kill switch: honored by runner + hourly_poster; NOT by queue_seed.
-- Daily-cap bug (found in audit, fixed on this branch): SharedState.clips_today
-  never reset, so the live runner silently stops cutting after 20 clips TOTAL
-  until a human restarts the process. Fixed: reset at local midnight.
-- Runner config reload (this branch): config.yaml re-read every 60s,
-  watch threads reconciled, effective config in logs/runner-state.json.
   Package: every service honors STOP.
 - Caps/limits enforced in code (keep): YT 8/day (slots 00/03/06/09/12/15/18/21),
   TikTok API ~15 Direct Posts/day + 5 drafts/24h, max 20 clips/day, 1 clip per
@@ -214,10 +210,57 @@ degrade to "that leg paused + health.json flags it" — the core loop never stop
 
 ## What remains before a real customer can install it
 
-- License: MIT exists in the repo. Pricing + terms of sale: not built.
-- Push the repo to GitHub (no remote yet) + a release channel for auto-update.
+- ~~License: MIT exists in the repo.~~ SUPERSEDED Nov 16, 2026: ClipForge
+  is PROPRIETARY (see "IP protection" below). Pricing + terms of sale:
+  not built (beta keys are free, expiry-dated).
+- ~~Push the repo to GitHub (no remote yet) + a release channel for auto-update.~~
+  SUPERSEDED: NO public push. The release channel is private (when one
+  exists); `update_channel` defaults to empty and `clipforge update`
+  refuses without one.
 - Live verification steps that need real credentials: IG session login, TikTok
   API end-to-end post, Content Rewards join/submit/earnings, YouTube OAuth in
   Production mode. All are documented as manual verification steps, not faked.
 - Dashboard auth beyond localhost (token) if remote access is ever enabled.
 - A full Python-package rename (clipsdaily → clipforge) if Abel confirms the name.
+  (Name is confirmed; the internal package stays `clipsdaily` — renaming
+  every import was not worth the churn. The product, CLI, and services are
+  ClipForge via `branding.py`.)
+
+## IP protection (added Nov 16, 2026 — Abel: "we have to make sure no one steals this")
+
+1. **Proprietary license.** The ClipForge distribution ships under
+   `packaging/LICENSE` (no redistribution, no resale, no sublicensing)
+   + `packaging/BETA_TERMS.md` (no sharing, no reselling, no
+   reverse-engineering for a competing product). The installer shows
+   both and installs only after acceptance (`--accept-license` or
+   interactive `I ACCEPT`, recorded in `.accepted-terms`).
+   MIT carriers found in the repo: root `LICENSE` (MIT) + pyproject
+   `license = "MIT"`. The package's pyproject now says
+   `Proprietary — see LICENSE` and the installer ships the proprietary
+   LICENSE. HONEST FLAG: the repo root MIT LICENSE file still exists,
+   so the underlying code in this repo is still MIT-licensed as
+   published — the proprietary terms govern the ClipForge *distribution*
+   (installer, wizard, dashboard, units, key check, packaged pipeline),
+   but a complete relicense means replacing the repo's LICENSE file
+   itself. That is Abel's legal call; until then the packaging branch
+   stays private and is never pushed to a public remote.
+2. **Private by rule.** No public push, no public repo, no publishing
+   the installer or setup docs anywhere public, never in the public
+   skills repo. The packaging branch is local-only.
+3. **License keys.** Offline Ed25519 signed keys (`CF1-<payload>.<sig>`,
+   payload `{"kid","email","exp","tier"}`). The installer validates
+   format + signature + expiry before installing anything; the
+   `clipforge` CLI re-checks the installed key on every service
+   command. Private key: `/home/abel/.config/clipforge/license-private.key`
+   (0600, abel-owned, never in any repo — must be moved to the Secure
+   Vault). Public key baked into `src/clipsdaily/license.py`. Issuance:
+   `packaging/tools/gen_license_key.py` (needs the private key).
+   This stops a leaked copy from just running; it is not DRM against a
+   determined reverse-engineer (stated in the README).
+4. **No internals in the GUI/docs.** The dashboard shows operation only
+   (watchlist, queue, health, settings, logs) — never cutter internals,
+   ranking weights, chat-spike thresholds, or source paths. `spike_cooldown_seconds`
+   was removed from the dashboard settings/API/validation for this
+   reason. The config template keeps the tuning keys (the customer owns
+   their box) with neutral "leave alone" comments. `docs/AUDIT_AND_DESIGN.md`
+   is internal-only and is never copied into a customer install.

@@ -1,0 +1,10 @@
+# ClipForge earnings dump (oneshot, run by the .timer daily).
+[Unit]
+Description=ClipForge earnings dump (oneshot)
+
+[Service]
+Type=oneshot
+WorkingDirectory=@CLIPFORGE_HOME@
+Environment=CLIPFORGE_HOME=@CLIPFORGE_HOME@
+Environment=PATH=@CLIPFORGE_VENV@/bin:/usr/local/sbin:/usr/local/bin:/usr/bin:/bin:@CLIPFORGE_HOME@/.local/bin
+ExecStart=@CLIPFORGE_VENV@/bin/clipforge earnings --update

@@ -1,0 +1,12 @@
+# ClipForge auto-submit (oneshot, run by the .timer every 15 min) —
+# scans the queue for submittable campaign clips and writes submit
+# jobs to the outbox (or files them when campaign automation is on).
+[Unit]
+Description=ClipForge auto-submit scan (oneshot)
+
+[Service]
+Type=oneshot
+WorkingDirectory=@CLIPFORGE_HOME@
+Environment=CLIPFORGE_HOME=@CLIPFORGE_HOME@
+Environment=PATH=@CLIPFORGE_VENV@/bin:/usr/local/sbin:/usr/local/bin:/usr/bin:/bin:@CLIPFORGE_HOME@/.local/bin
+ExecStart=@CLIPFORGE_VENV@/bin/clipforge submit scan

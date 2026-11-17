@@ -13,7 +13,7 @@ server-rendered page (`src/clipsdaily/dashboard.py`).
 | Queue | `queue/queue.json` (**read-only**) | Entries grouped pending / posted / failed / partial, with per-platform status (`yt_url`, `tt_url`, retries, streamer, `created_at`). |
 | Post history | `logs/hourly-*.log` + `ig-outbox/*/.posted` | Latest 50 posts: clip id, platform, link, time. Log lines are the `YOUTUBE LIVE` / `TIKTOK LIVE` lines; IG entries carry `media_fbid` + `posted_at_utc`. |
 | Health | `health.json` (+ `watchdog-state.json` if present) | Each platform + last-post time + status color (green healthy/idle, red unhealthy, amber known-broken). |
-| Settings | `config.yaml` | YouTube slot hours (shown, not editable in v1 — they are fixed in the hourly poster), `max_clips_per_day`, spike cooldown, queue-clip retention, platform toggles, captions rule (one line, no hashtags — displayed, not editable), kill switch. |
+| Settings | `config.yaml` | YouTube slot hours (shown, not editable in v1 — they are fixed in the hourly poster), `max_clips_per_day`, queue-clip retention, platform toggles, captions rule (one line, no hashtags — displayed, not editable), kill switch. |
 | Logs | `logs/*.log` | Latest 200 lines total, HTML-escaped. |
 
 ## How to start it
@@ -87,7 +87,7 @@ Dashboard auth beyond localhost (a token) is a follow-up, not v1.
 | `/api/logs` | GET | JSON: latest 200 log lines. |
 | `/api/watchlist/add` | POST | Form/JSON `{platform: twitch\|kick, channel}` — validates, appends to `config.yaml` (atomic). |
 | `/api/watchlist/remove` | POST | Form/JSON `{platform, channel}` — removes from `config.yaml` (atomic). |
-| `/api/settings` | POST | Form/JSON: `max_clips_per_day` (1–100), `spike_cooldown_seconds` (0–3600), `queue_clip_retention_days` (0–90), `platform_youtube/tiktok/instagram` toggles. |
+| `/api/settings` | POST | Form/JSON: `max_clips_per_day` (1–100), `queue_clip_retention_days` (0–90), `platform_youtube/tiktok/instagram` toggles. |
 | `/api/stop` | POST | Form/JSON `{action: on\|off}` — create/delete `STOP`. |
 
 Anything else (including any `/api/queue/*` mutation) is a 404.

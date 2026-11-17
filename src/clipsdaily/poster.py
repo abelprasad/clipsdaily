@@ -42,11 +42,50 @@ AUTH_DIR = HERE / ".auth"
 
 TIKTOK_MIN_SECONDS = 60
 
-# Clipsdaily accounts — NEVER point these at Abel's personal accounts.
+# Default accounts (the original ClipsDaily accounts). A customer
+# deployment overrides these in config.yaml under `accounts:` — the
+# package must NEVER hardcode one customer's accounts into a sold
+# product. Username is the primary identity check; the numeric IG id
+# is only checked when explicitly configured.
 IG_USERNAME = "clippedaily31"
 IG_USER_ID = 27125641130          # user_igid for @clippedaily31
 YT_HANDLE = "@Clippedaily31"
+YT_CHANNEL_TITLE = "Clips Daily"
 TIKTOK_USERNAME = "clips.daily548"
+
+# Caption/title brand prefix. The live system posts "clipsdaily • ...";
+# the package posts under the ClipForge brand unless the customer sets
+# `brand_caption_prefix` in config.yaml.
+from .branding import BRAND_SLUG  # noqa: E402
+
+
+def _load_config_file():
+    try:
+        import yaml
+        with open(HERE / "config.yaml") as f:
+            return yaml.safe_load(f) or {}
+    except Exception:
+        return {}
+
+
+def _accounts(config=None):
+    """Effective account identities: config.yaml `accounts:` merged
+    over the defaults above. Returns a dict with keys instagram,
+    instagram_user_id (or None), youtube, youtube_title, tiktok."""
+    cfg = config if isinstance(config, dict) else _load_config_file()
+    over = cfg.get("accounts") or {}
+    return {
+        "instagram": over.get("instagram", IG_USERNAME),
+        "instagram_user_id": over.get("instagram_user_id"),
+        "youtube": over.get("youtube", YT_HANDLE),
+        "youtube_title": over.get("youtube_title", YT_CHANNEL_TITLE),
+        "tiktok": over.get("tiktok", TIKTOK_USERNAME),
+    }
+
+
+def _caption_prefix(config=None):
+    cfg = config if isinstance(config, dict) else _load_config_file()
+    return cfg.get("brand_caption_prefix", BRAND_SLUG)
 
 IG_SESSION_FILE = AUTH_DIR / "instagram_session.json"
 YT_TOKEN_FILE = AUTH_DIR / "youtube_token.json"
@@ -65,10 +104,10 @@ def _duration_seconds(clip):
     return float(r.stdout.strip())
 
 
-def _caption(channel, game="", platform="twitch"):
+def _caption(channel, game="", platform="twitch", config=None):
     # Cut down Nov 15, 2026, per Abel: one line, no hashtags. The
     # streamer name is the credit; the hook overlay carries the moment.
-    return f"clipsdaily • {channel}"
+    return f"{_caption_prefix(config)} • {channel}"
 
 
 def _make_cover(clip):
@@ -83,8 +122,14 @@ def _make_cover(clip):
 
 
 # ---------------------------------------------------------------- Instagram
-def _ig_client():
-    """Logged-in instagrapi client for @clippedaily31, or raise."""
+def _ig_client(config=None):
+    """Logged-in instagrapi client for the configured IG account, or raise.
+
+    Identity check: the session's username must match
+    accounts.instagram (primary); the numeric id is checked only when
+    accounts.instagram_user_id is set.
+    """
+    accounts = _accounts(config)
     if not IG_SESSION_FILE.exists():
         raise AuthNotConfigured(
             "Instagram session missing: run auth_instagram.py once to "
@@ -103,17 +148,23 @@ def _ig_client():
     except LoginRequired:
         raise AuthNotConfigured(
             "Instagram session expired; re-run auth_instagram.py")
-    if int(me.pk) != IG_USER_ID:
+    expected_user = accounts["instagram"]
+    if expected_user and me.username.lower() != expected_user.lower():
         raise AuthNotConfigured(
             f"Instagram session is for the wrong account (@{me.username}); "
-            f"expected {IG_USERNAME} ({IG_USER_ID})")
+            f"expected @{expected_user}")
+    expected_id = accounts["instagram_user_id"]
+    if expected_id and int(me.pk) != int(expected_id):
+        raise AuthNotConfigured(
+            f"Instagram session id {me.pk} does not match configured "
+            f"id {expected_id} (@{me.username})")
     return cl
 
 
-def check_instagram():
+def check_instagram(config=None):
     """Read-only check. Returns (ok, detail). Posts nothing."""
     try:
-        cl = _ig_client()
+        cl = _ig_client(config)
         info = cl.account_info()
         return True, (f"logged in as @{info.username} "
                       f"(id {info.pk}, professional: {info.is_business})")
@@ -127,8 +178,8 @@ def post_instagram(clip, channel, config, platform="twitch"):
     if not config.get("platforms", {}).get("instagram"):
         print("[poster] instagram OFF, skipping", flush=True)
         return False
-    cl = _ig_client()
-    caption = _caption(channel, platform=platform)
+    cl = _ig_client(config)
+    caption = _caption(channel, platform=platform, config=config)
     cover = _make_cover(clip)
     try:
         media = cl.clip_upload(str(clip), caption, thumbnail=cover)
@@ -160,8 +211,9 @@ def _yt_service():
     return build("youtube", "v3", credentials=creds)
 
 
-def check_youtube():
+def check_youtube(config=None):
     """Read-only check. Returns (ok, detail). Posts nothing."""
+    accounts = _accounts(config)
     try:
         yt = _yt_service()
         resp = yt.channels().list(part="snippet", mine=True).execute()
@@ -170,8 +222,8 @@ def check_youtube():
             return False, "token valid but no channel found on this account"
         title = items[0]["snippet"]["title"]
         handle = items[0]["snippet"].get("customUrl", "")
-        if (handle.lstrip("@").lower() != YT_HANDLE.lstrip("@").lower()
-                and title != "Clips Daily"):
+        if (handle.lstrip("@").lower() != accounts["youtube"].lstrip("@").lower()
+                and title != accounts["youtube_title"]):
             return False, (f"token is for the wrong channel: "
                            f"{title} ({handle})")
         return True, f"authenticated as channel '{title}' ({handle})"
@@ -189,15 +241,15 @@ def post_youtube(clip, channel, config, platform="twitch",
     from googleapiclient.http import MediaFileUpload
     yt = _yt_service()
     if title is None:
-        title = f"{channel} clip | clipsdaily #shorts"
+        title = f"{channel} clip | {BRAND_SLUG} #shorts"
     if caption is None:
-        caption = _caption(channel, platform=platform)
+        caption = _caption(channel, platform=platform, config=config)
     description = caption
     body = {
         "snippet": {
             "title": title,
             "description": description,
-            "tags": ["clipsdaily", channel, "shorts", "gaming",
+            "tags": [BRAND_SLUG, channel, "shorts", "gaming",
                      "streamclips"],
             "categoryId": "24",
         },
@@ -244,7 +296,7 @@ def check_tiktok():
     an upload attempt).
     """
     try:
-        import tiktok_api
+        from . import tiktok_api
         if tiktok_api.CLIENT_FILE.exists():
             ok, detail = tiktok_api.check_tiktok_api()
             return ok, "API: " + detail
@@ -269,7 +321,7 @@ def _post_tiktok_api(clip, caption, config):
     the API client/token files are missing, and TikTokUploadPending
     when the bytes landed but moderation is still running.
     """
-    import tiktok_api
+    from . import tiktok_api
     if not tiktok_api.CLIENT_FILE.exists():
         raise AuthNotConfigured(
             "TikTok API client missing: create the developer app and "
@@ -312,7 +364,7 @@ def post_tiktok(clip, channel, config, platform="twitch", caption=None,
               flush=True)
         return False
     if caption is None:
-        caption = _caption(channel, platform=platform)
+        caption = _caption(channel, platform=platform, config=config)
     if config.get("tiktok_api"):
         return _post_tiktok_api(clip, caption, config)
     _tiktok_cookies()  # early auth guard: raises if cookies/sessionid missing
@@ -324,7 +376,7 @@ def post_tiktok(clip, channel, config, platform="twitch", caption=None,
     # Subprocess (Nov 16, 2026): the in-process uploader leaks its
     # Playwright event loop (see post_file_subprocess), which breaks
     # every later TikTok post in this long-lived process.
-    from post_tiktok_fixed import post_file_subprocess
+    from .post_tiktok_fixed import post_file_subprocess
     ok, url, detail = post_file_subprocess(str(clip), caption, label=channel)
     if not ok or not url:
         raise RuntimeError(f"TikTok post failed/not verified: {detail}")

@@ -33,6 +33,7 @@ Usage:
       prints the verdict, and writes nothing to campaign_queue.json.
 """
 import argparse
+import fcntl
 import json
 import sys
 import time
@@ -45,6 +46,11 @@ from .eligibility_gate import gate_clip  # noqa: E402
 from .paths import runtime_home
 HERE = runtime_home()
 CAMPAIGN_QUEUE_FILE = HERE / "campaign_queue.json"
+# Same lock file the hourly poster uses (hourly_poster.py:
+# CAMPAIGN_QUEUE_LOCK) — both writers serialize on it so a
+# campaign_cut save can never wipe a poster save (the Nov 16 queue
+# race, same shape, different file).
+CAMPAIGN_QUEUE_LOCK = CAMPAIGN_QUEUE_FILE.with_suffix(".lock")
 CAMPAIGN_CLIPS_DIR = HERE / "campaign_clips"
 CAMPAIGN_WORK_DIR = HERE / "campaign_work"
 LOG_FILE = HERE / "campaign_cut.log"
@@ -74,6 +80,23 @@ def save_campaign_queue(entries):
     tmp = CAMPAIGN_QUEUE_FILE.with_suffix(".json.tmp")
     tmp.write_text(json.dumps(entries, indent=2))
     tmp.replace(CAMPAIGN_QUEUE_FILE)
+
+
+def save_campaign_entry(entry):
+    """Persist ONE campaign entry, merging onto current disk state
+    under the shared campaign_queue.lock (same pattern as the hourly
+    poster's save_campaign_entry). Replaces an entry with the same id
+    instead of duplicating it."""
+    with open(CAMPAIGN_QUEUE_LOCK, "w") as lf:
+        fcntl.flock(lf, fcntl.LOCK_EX)
+        fresh = load_campaign_queue()
+        for i, fe in enumerate(fresh):
+            if fe.get("id") == entry.get("id"):
+                fresh[i] = entry
+                break
+        else:
+            fresh.append(entry)
+        save_campaign_queue(fresh)
 
 
 def build_campaign_texts(campaign, streamer, destination, phrase, hook):
@@ -281,8 +304,7 @@ def main():
             continue
         done.append(entry)
         if not args.dry_run:
-            entries.append(entry)
-            save_campaign_queue(entries)
+            save_campaign_entry(entry)
     print(json.dumps({"ok": True, "campaign": campaign["id"],
                       "cut": len(done),
                       "entries": [{k: e[k] for k in

@@ -334,6 +334,30 @@ class DashboardLiveTests(unittest.TestCase):
             self.assertEqual(status, 404, path)
         self.assertEqual(before, self._queue_hash())
 
+    def test_5_settings_ignores_spike_tuning(self):
+        """IP protection (Nov 16, 2026): the GUI must never accept or
+        show spike-tuning knobs. A POST carrying spike_cooldown_seconds
+        leaves the value untouched (a legit field still works), and the
+        settings section never mentions spikes."""
+        import yaml
+        before = yaml.safe_load((self.home / "config.yaml").read_text())
+        self.assertEqual(before.get("spike_cooldown_seconds"), 300)
+        status, _ = http_post_form("/api/settings", {
+            "max_clips_per_day": "25",
+            "spike_cooldown_seconds": "999",
+            "queue_clip_retention_days": "7",
+        })
+        self.assertIn(status, (200, 303))
+        after = yaml.safe_load((self.home / "config.yaml").read_text())
+        self.assertEqual(after.get("max_clips_per_day"), 25)
+        self.assertEqual(after.get("spike_cooldown_seconds"), 300)
+        status, html = http_get("/")
+        self.assertEqual(status, 200)
+        section = html.split('<section id="settings">')[1].split(
+            "</section>")[0]
+        self.assertNotIn("spike", section.lower())
+        self.assertNotIn("spike_cooldown", html)
+
     def test_4_stop_toggle_is_reversible(self):
         stop = self.home / "STOP"
         if stop.exists():

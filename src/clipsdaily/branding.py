@@ -14,4 +14,7 @@ BRAND_NAME = "ClipForge"
 BRAND_SLUG = "clipforge"
 BRAND_CLI = "clipforge"
 BRAND_TAGLINE = "Fully automatic stream clip pipeline: record, cut, post."
-BRAND_HOMEPAGE = "https://github.com/abelprasad/clipforge"
+# No public homepage: ClipForge is proprietary and private. The
+# release channel (for `clipforge update`) is a private repo, set by
+# the vendor when one exists. Keep this empty until then.
+BRAND_HOMEPAGE = ""
