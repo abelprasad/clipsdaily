@@ -1,0 +1,105 @@
+{
+  "beats": [
+    {
+      "id": "hook",
+      "kind": "hook",
+      "minSeconds": 3,
+      "text": "Stop paying $49/mo for clips that die in 2 days",
+      "voice": "Stop paying forty-nine dollars a month for clips that die in two days."
+    },
+    {
+      "id": "r1",
+      "kind": "receipt",
+      "minSeconds": 3,
+      "text": "OpusClip Pro — $29/mo",
+      "voice": "OpusClip Pro: twenty-nine dollars a month."
+    },
+    {
+      "id": "r2",
+      "kind": "receipt",
+      "minSeconds": 3,
+      "text": "Claude Pro — $20/mo",
+      "voice": "Claude Pro: twenty dollars a month."
+    },
+    {
+      "id": "r3",
+      "kind": "receipt",
+      "minSeconds": 3.2,
+      "text": "300 credits = 5 hours of video",
+      "voice": "Three hundred credits equals five hours of video."
+    },
+    {
+      "id": "r4",
+      "kind": "receipt",
+      "minSeconds": 3.4,
+      "text": "Stream 2.5 hrs/day → gone in 2 days",
+      "voice": "Stream two and a half hours a day, and it's gone in two days."
+    },
+    {
+      "id": "r5",
+      "kind": "total",
+      "minSeconds": 3,
+      "text": "Total: $49/mo",
+      "voice": "Total: forty-nine dollars a month."
+    },
+    {
+      "id": "a1",
+      "kind": "alternative",
+      "minSeconds": 3.2,
+      "text": "ClipForge clips LIVE — Opus and Vizard don't",
+      "voice": "ClipForge clips live. Opus and Vizard don't."
+    },
+    {
+      "id": "a2",
+      "kind": "alternative",
+      "minSeconds": 3,
+      "text": "No credits. No per-minute billing.",
+      "voice": "No credits. No per-minute billing."
+    },
+    {
+      "id": "a3",
+      "kind": "alternative",
+      "minSeconds": 3,
+      "text": "Auto-posts to IG, YouTube, TikTok",
+      "voice": "It auto-posts to Instagram, YouTube, and TikTok."
+    },
+    {
+      "id": "a4",
+      "kind": "alternative",
+      "minSeconds": 3.4,
+      "text": "$199 one-time kit or $19–29/mo — you own it",
+      "voice": "One ninety-nine one-time, or nineteen to twenty-nine a month. And you own it."
+    },
+    {
+      "id": "cta",
+      "kind": "cta",
+      "minSeconds": 5,
+      "subtext": "I'll DM you the link",
+      "text": "Comment CLIPFORGE",
+      "voice": "Comment CLIPFORGE, and I'll DM you the link."
+    }
+  ],
+  "fps": 30,
+  "height": 1920,
+  "timings": {
+    "hook": 4.17,
+    "r1": 3.43,
+    "r2": 3,
+    "r3": 3.24,
+    "r4": 3.98,
+    "r5": 3,
+    "a1": 3.23,
+    "a2": 3,
+    "a3": 3.89,
+    "a4": 4.88,
+    "cta": 5
+  },
+  "title": "Receipt Reel v1 — Stop paying $49/mo",
+  "voice": {
+    "engine": "Piper (free, local, offline)",
+    "lengthScale": 1,
+    "model": "en_US-lessac-medium",
+    "modelPath": "voices/en_US-lessac-medium.onnx"
+  },
+  "width": 1080
+}

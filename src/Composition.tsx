@@ -1,25 +1,25 @@
-import { CalculateMetadataFunction, Composition } from "remotion";
+import { Composition } from "remotion";
+import { getTotalFrames, ReceiptReel } from "./ReceiptReel";
+import type { ReceiptReelProps } from "./ReceiptReel";
+import scriptJson from "./script.json";
 
-type Props = {};
+const defaultScript = scriptJson as unknown as ReceiptReelProps["script"];
 
-const calculateMetadata: CalculateMetadataFunction<Props> = () => {
-  return {};
-};
-
-export const MyComposition = () => {
+export const ReceiptReelComposition = () => {
   return (
     <Composition
-      id="MyComp"
-      component={MyComponent}
-      durationInFrames={60}
+      id="ReceiptReel"
+      component={ReceiptReel}
       fps={30}
-      width={1280}
-      height={720}
-      calculateMetadata={calculateMetadata}
+      width={1080}
+      height={1920}
+      durationInFrames={getTotalFrames(defaultScript, 30)}
+      defaultProps={{ script: defaultScript }}
+      calculateMetadata={({ props }) => {
+        return {
+          durationInFrames: getTotalFrames(props.script, 30),
+        };
+      }}
     />
   );
-};
-
-export const MyComponent: React.FC<Props> = () => {
-  return null;
 };
