@@ -9,6 +9,7 @@ numbers — OpusClip Pro is **$29/mo**, not $19.
   the voiceover — see below)
 - Free only: Remotion is free for teams of 3 or fewer, system fonts only,
   no paid assets, no paid voice. Renders on indra with local tooling.
+- **v3 animation (Nov 16, 2026):** full reel style — an endless-runner background drawn in code (parallax skylines, scrolling ground, runner silhouette, coins, speed lines, all behind a scrim so copy stays legible) plus kinetic text: hook words pop in one at a time with the $49 counting up 0 → 49, receipt rows slide in, the total slams in, the CTA pulses. No ripped footage, no copyrighted assets.
 - Voiceover: AI voice, never Abel's voice. Kokoro TTS (Kokoro-82M, MIT,
   free, local, offline), voice `af_heart` at speed 0.95,
   loudness-normalized to -17 dB mean. Runs in `.venv-kokoro/`
@@ -18,13 +19,13 @@ numbers — OpusClip Pro is **$29/mo**, not $19.
 
 ```bash
 npm run voiceover   # regenerate narration WAVs + timings (after any script edit)
-npm run render      # -> out/receipt-reel-v2.mp4
+npm run render      # -> out/receipt-reel-v3.mp4
 ```
 
 Or directly:
 
 ```bash
-npx remotion render ReceiptReel out/receipt-reel-v2.mp4 --props=./src/script.json --license-key=free-license
+npx remotion render ReceiptReel out/receipt-reel-v3.mp4 --props=./src/script.json --license-key=free-license
 ```
 
 ## Make a variant — edit ONE file
