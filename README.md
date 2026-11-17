@@ -24,6 +24,7 @@ numbers — OpusClip Pro is **$29/mo**, not $19.
 ```bash
 npm run voiceover   # regenerate narration WAVs + timings (after any script edit)
 npm run render      # -> out/receipt-reel-v6.mp4
+npm run retention-check   # heuristic pre-post check, -> docs/retention-v6.txt
 ```
 
 Or directly:
@@ -31,6 +32,46 @@ Or directly:
 ```bash
 npx remotion render ReceiptReel out/receipt-reel-v6.mp4 --props=./src/script.json --license-key=free-license
 ```
+
+## Retention check (pre-post)
+
+Before an ad is posted, run the retention check against the render. It
+flags the seconds where a viewer is most likely to bail. Heuristic only:
+it measures what ffmpeg can measure and says so. **It does not score the
+ad and there is no "out of 100" number** — a calibrated retention score
+needs real watch data, and this tool does not invent one.
+
+```bash
+npm run retention-check
+# or: python3 scripts/retention-check.py [--mp4 ...] [--script ...] [--out ...]
+```
+
+What it checks (exit 0 = PASS, 1 = REVIEW, 2 = tool error):
+
+- **Pace** — words per minute of each beat's voice line over its beat
+  timing. FLAG over 200 wpm, WARN over 180.
+- **Silence** — dead-air gaps of 0.5s or more in the rendered audio, and
+  an end tail over 1.0s. (v5 trimmed inter-beat gaps to ~0.5s, so anything
+  above that is a regression.)
+- **Beat hold** — a beat outlasting its voiceover WAV by over 1.0s.
+- **Visual stasis** — picture near-frozen for over 4.0s (mean per-pixel
+  delta under 0.5 at 2 fps). Calibrated on v6: slowest animated moment
+  measured 1.29, a frozen frame measures 0.0.
+- **Hook payoff (estimate)** — when the first money/number word is spoken
+  in the hook, assuming words are evenly spaced. An estimate, not a
+  measurement; FLAG past 3.0s. If it flags, watch the first 3 seconds by
+  eye — the on-screen payoff may land sooner than the spoken one.
+
+What it cannot catch: on-screen layout (empty bands, overlaps, text
+collisions), whether a claim is true, whether the hook is interesting, or
+anything about the audience. Watch the render once by eye.
+
+Verified Nov 17, 2026: v6 passes everything except one flag — a real
+0.55s silence at 21.07s in the mechanism beat (a TTS sentence pause in
+`mechanism.wav`, confirmed in the source WAV). The check also caught the
+known v5 problem beat r4 at 243 wpm (documented as ~285 wpm by audio
+length), and a synthetic 5s frozen end flagged 4.5s of stasis plus a
+5.45s end tail. Latest report: `docs/retention-v6.txt`.
 
 ## Make a variant — edit ONE file
 
@@ -130,6 +171,9 @@ pages before rendering a new variant.
 - `scripts/generate-voiceover.mjs` — Kokoro narration + timing measurement.
 - `scripts/generate-kokoro-voiceover.py` — per-beat Kokoro synthesis +
   loudness normalization (called by the .mjs).
+- `scripts/retention-check.py` — pre-post retention check (see above).
+  Stdlib only + ffmpeg/ffprobe, no new dependencies.
+- `docs/retention-v6.txt` — latest retention-check report for v6.
 - `public/voiceover/` — generated narration WAVs (gitignored).
 - `voices/` — alternate Piper voice models (gitignored, download only;
   v2 uses Kokoro, kept for voice comparisons).

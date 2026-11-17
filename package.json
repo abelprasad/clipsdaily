@@ -30,6 +30,7 @@
     "lint": "eslint src && tsc",
     "voiceover": "node scripts/generate-voiceover.mjs",
     "render": "remotion render ReceiptReel out/receipt-reel-v6.mp4 --props=./src/script.json --license-key=free-license",
+    "retention-check": "python3 scripts/retention-check.py --out docs/retention-v6.txt",
     "frames": "remotion render ReceiptReel out/v6-frames --props=./src/script.json --license-key=free-license --frames=135,240,390,510,645,735,900,1095 --image-format=png"
   },
   "allowScripts": {
