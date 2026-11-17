@@ -34,3 +34,7 @@ Reference: [architecture-decision-record/architecture-decision-record](https://g
 | 013 | [Label old VOD clips as throwbacks](label-old-vod-clips-as-throwbacks.md) | Accepted | 2026-11-15 |
 | 014 | [Keep live state out of git](keep-live-state-out-of-git.md) | Accepted | 2026-11-15 |
 | 015 | [Use repo as dev copy](use-repo-as-dev-copy.md) | Accepted | 2026-11-15 |
+| 016 | [Seed famous clips from top Twitch clips](seed-famous-clips-from-top-twitch-clips.md) | Accepted | 2026-11-17 |
+| 017 | [Post Instagram from indra via instagrapi](post-instagram-from-indra-via-instagrapi.md) | Accepted | 2026-11-17 |
+| 018 | [Preserve and shut down the pipeline](preserve-and-shut-down-the-pipeline.md) | Accepted | 2026-11-17 |
+| 019 | [Keep ClipForge ads in the same repo](keep-clipforge-ads-in-the-same-repo.md) | Accepted | 2026-11-17 |
