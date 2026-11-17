@@ -1,7 +1,8 @@
 # Pinned where the live pipeline's versions are known; the rest float.
 streamlink==8.6.3
-openai-whisper
-instagrapi==3.1.0
+openai-whisper  # only used by historical patch_cutter_hook2.py; the live cutter uses faster-whisper
+faster-whisper  # transcription (switched Nov 16, 2026; ~4x faster, no torch)
+instagrapi==3.2.15  # 3.1.0 password login is broken (password_publickeys); fixed upstream in 3.2.3
 tiktok-uploader==1.2.0
 google-api-python-client==2.196.0
 google-auth-oauthlib
