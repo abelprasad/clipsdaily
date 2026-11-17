@@ -1,6 +1,8 @@
 import os
 from pathlib import Path
-AUTH_DIR = Path("/home/abel/clipsdaily/.auth")
+
+from .paths import runtime_home
+AUTH_DIR = runtime_home() / ".auth"
 SECRETS_FILE = AUTH_DIR / "youtube_client_secrets.json"
 TOKEN_FILE = AUTH_DIR / "youtube_token.json"
 SCOPES = ["https://www.googleapis.com/auth/youtube.upload",

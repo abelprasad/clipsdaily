@@ -28,11 +28,16 @@ Nov 16: failed YT/TT slots wrote "failed"/"pending" into the meta and
 the IG cron only posts "staged").
 
 Safety: never posts the same clip twice (status transitions in
-queue.json); never posts while /home/abel/clipsdaily/STOP exists (same
+queue.json); never posts while STOP exists in the runtime home (same
 kill switch as the runner); a failed platform is retried next hour
 (max 2 retries, then marked failed and the queue moves on). Posts
-nothing to Content Rewards. Instagram is staged only — the parent VM
-posts Reels from ig-outbox/ via instagram-cli.
+nothing to Content Rewards. Instagram is staged only — the IG worker
+posts Reels from ig-outbox/.
+
+Campaigns (ClipForge package): when a campaign is active (joined in
+campaigns.json), the poster prefers campaign_queue.json entries and
+re-runs the eligibility gate at post time. A gate failure blocks the
+entry — it is never posted, never submitted.
 """
 import fcntl
 import json
@@ -43,9 +48,9 @@ import time
 from datetime import datetime, timedelta
 from pathlib import Path
 
-sys.path.insert(0, "/home/abel/clipsdaily")
+from .paths import runtime_home
 
-HERE = Path("/home/abel/clipsdaily")
+HERE = runtime_home()
 QUEUE_DIR = HERE / "queue"
 QUEUE_FILE = QUEUE_DIR / "queue.json"
 OUTBOX = HERE / "ig-outbox"
@@ -56,18 +61,100 @@ CONFIG = {"platforms": {"youtube": True, "tiktok": True, "instagram": False},
 
 
 def refresh_config():
-    """Merge tiktok_api flags from config.yaml into CONFIG.
+    """Merge config.yaml into CONFIG.
 
-    Read every slot so flipping `tiktok_api: true` in config.yaml
-    takes effect without restarting this poster.
+    Read every slot so flipping `tiktok_api: true` (or toggling a
+    platform) in config.yaml takes effect without restarting this
+    poster. Platforms default to on; a customer who disables one in
+    config.yaml stops that leg here too.
     """
     try:
         import yaml
         cfg = yaml.safe_load((HERE / "config.yaml").read_text()) or {}
         CONFIG["tiktok_api"] = bool(cfg.get("tiktok_api", False))
         CONFIG["tiktok_api_mode"] = cfg.get("tiktok_api_mode", "direct")
+        platforms = cfg.get("platforms") or {}
+        for name in ("youtube", "tiktok", "instagram"):
+            if name in platforms:
+                CONFIG["platforms"][name] = bool(platforms[name])
     except Exception:
         pass
+
+
+# ------------------------------------------------------------------ campaigns
+CAMPAIGN_QUEUE_FILE = HERE / "campaign_queue.json"
+CAMPAIGN_QUEUE_LOCK = CAMPAIGN_QUEUE_FILE.with_suffix(".lock")
+CAMPAIGNS_FILE = HERE / "campaigns.json"
+
+
+def load_campaign_queue():
+    if not CAMPAIGN_QUEUE_FILE.exists():
+        return []
+    try:
+        return json.loads(CAMPAIGN_QUEUE_FILE.read_text())
+    except Exception:
+        return []
+
+
+def save_campaign_queue(entries):
+    tmp = CAMPAIGN_QUEUE_FILE.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(entries, indent=2))
+    tmp.replace(CAMPAIGN_QUEUE_FILE)
+
+
+def save_campaign_entry(entry):
+    """Persist ONE campaign entry, merging onto current disk state
+    (same race protection as save_entry)."""
+    with open(CAMPAIGN_QUEUE_LOCK, "w") as lf:
+        fcntl.flock(lf, fcntl.LOCK_EX)
+        fresh = load_campaign_queue()
+        for i, fe in enumerate(fresh):
+            if fe.get("id") == entry.get("id"):
+                fresh[i] = entry
+                break
+        else:
+            fresh.append(entry)
+        save_campaign_queue(fresh)
+
+
+def load_campaigns():
+    try:
+        data = json.loads(CAMPAIGNS_FILE.read_text())
+    except Exception:
+        return {}
+    if isinstance(data, dict):
+        return data.get("campaigns", {}) or {}
+    return {}
+
+
+def active_campaigns():
+    """Joined, active campaigns with budget left (dict id -> campaign)."""
+    out = {}
+    for cid, c in load_campaigns().items():
+        if not isinstance(c, dict):
+            continue
+        if c.get("state") != "joined":
+            continue
+        if c.get("status") not in (None, "active"):
+            continue
+        avail = c.get("budget_available_cents")
+        if avail is not None and avail <= 0:
+            continue
+        out[cid] = c
+    return out
+
+
+def gate_campaign_entry(entry, campaign):
+    """Re-run the eligibility gate at post time. Returns (ok, reason).
+    A failure blocks the entry: never posted, never submitted."""
+    try:
+        from .eligibility_gate import gate_clip
+        verdict = gate_clip(entry, campaign)
+    except Exception as e:
+        return False, "gate error: %s" % e
+    if verdict.get("ok"):
+        return True, ""
+    return False, verdict.get("block_reason", "gate blocked") or "gate blocked"
 MAX_RETRIES = 2
 YT_HOURS = {0, 3, 6, 9, 12, 15, 18, 21}  # YouTube slots: 8/day
 
@@ -148,7 +235,7 @@ def is_youtube_slot(hour_label):
 def verify_youtube(vid):
     """Confirm a YouTube video id exists and is public."""
     try:
-        from poster import _yt_service
+        from .poster import _yt_service
         yt = _yt_service()
         resp = yt.videos().list(part="status,snippet", id=vid).execute()
         items = resp.get("items", [])
@@ -219,7 +306,7 @@ def update_outbox_meta(entry):
 
 def post_entry(entry, hour_label):
     """Post missing platforms for one entry. Returns True if fully done."""
-    from poster import post_youtube, post_tiktok
+    from .poster import post_youtube, post_tiktok
     channel = entry["streamer"]
     yt_slot = is_youtube_slot(hour_label)
     if not entry.get("yt_url"):
@@ -261,7 +348,7 @@ def post_entry(entry, hour_label):
         pid = tt_url.split(":", 1)[1]
         kind = "DRAFT" if tt_url.startswith("DRAFT:") else "PENDING"
         try:
-            from tiktok_api import reconcile_pending
+            from .tiktok_api import reconcile_pending
             out = reconcile_pending(pid)
             res = out[0] if out else {}
             if res.get("url"):
@@ -318,7 +405,7 @@ def post_entry(entry, hour_label):
                 # landed): record the publish_id, do NOT burn a retry
                 # and do NOT re-upload — next slot reconciles it.
                 try:
-                    from tiktok_api import TikTokUploadPending
+                    from .tiktok_api import TikTokUploadPending
                     pending = isinstance(e, TikTokUploadPending)
                 except Exception:
                     pending = False
@@ -356,6 +443,44 @@ def post_entry(entry, hour_label):
     return entry["status"] in ("posted", "failed")
 
 
+def pick_entry(hour_label):
+    """Next entry to post: a campaign entry first when a campaign is
+    active (gate re-checked at post time; a blocked entry is marked
+    blocked and the next one is tried), else the normal queue pick.
+    Returns (entry, is_campaign) or (None, False)."""
+    active = active_campaigns()
+    if active:
+        cq = [e for e in load_campaign_queue()
+              if e.get("status") in ("pending", "partial")]
+        for entry in cq:
+            campaign = active.get(entry.get("campaign_id"))
+            if campaign is None:
+                continue
+            ok, reason = gate_campaign_entry(entry, campaign)
+            if not ok:
+                entry["status"] = "blocked"
+                entry["block_reason"] = reason
+                entry.setdefault("history", []).append({
+                    "hour": hour_label, "status": "blocked",
+                    "at": time.strftime("%Y-%m-%dT%H:%M:%S"),
+                    "block_reason": reason})
+                save_campaign_entry(entry)
+                log("%s: campaign gate BLOCKED at post time: %s"
+                    % (entry["id"], reason))
+                continue
+            return entry, True
+    entries = load_queue()
+    pending = [e for e in entries if e["status"] in ("pending", "partial")]
+    if not pending:
+        return None, False
+    if is_youtube_slot(hour_label):
+        return pending[0], False
+    need_tt = [e for e in pending
+               if not e.get("tt_url")
+               or str(e.get("tt_url")).startswith(("PENDING:", "DRAFT:"))]
+    return (need_tt[0] if need_tt else pending[0]), False
+
+
 def main():
     log("hourly poster starting (tz check: local %s)"
         % time.strftime("%Y-%m-%d %H:%M:%S %Z"))
@@ -373,27 +498,15 @@ def main():
             time.sleep(60)
             continue
         refresh_config()
-        entries = load_queue()
-        pending = [e for e in entries if e["status"] in ("pending", "partial")]
-        if not pending:
+        entry, is_campaign = pick_entry(hour_label)
+        if entry is None:
             log("queue empty at %s — nothing to post" % hour_label)
             time.sleep(60)
             continue
-        yt_slot = is_youtube_slot(hour_label)
-        if yt_slot:
-            entry = pending[0]
-        else:
-            # Non-YouTube slots keep TikTok/IG at 2/hour: take the first
-            # entry that still needs a TikTok post, instead of sitting
-            # behind an entry that is only waiting on its YouTube slot.
-            need_tt = [e for e in pending
-                       if not e.get("tt_url")
-                       or str(e.get("tt_url")).startswith(
-                           ("PENDING:", "DRAFT:"))]
-            entry = need_tt[0] if need_tt else pending[0]
-        log("posting %s at %s (streamer %s)%s"
+        log("posting %s at %s (streamer %s)%s%s"
             % (entry["id"], hour_label, entry["streamer"],
-               "" if yt_slot else " [non-YouTube slot]"))
+               " [campaign]" if is_campaign else "",
+               "" if is_youtube_slot(hour_label) else " [non-YouTube slot]"))
         try:
             stage_instagram(entry, hour_label)
             log(f"{entry['id']}: instagram staged in ig-outbox/")
@@ -404,7 +517,10 @@ def main():
         except Exception as e:
             log(f"{entry['id']}: unexpected post error: {e}")
             done = False
-        save_entry(entry)
+        if is_campaign:
+            save_campaign_entry(entry)
+        else:
+            save_entry(entry)
         log(f"{entry['id']}: slot done, status={entry['status']}")
         time.sleep(60)  # avoid double-firing within the same slot
 

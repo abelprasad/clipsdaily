@@ -38,8 +38,8 @@ from pathlib import Path
 from .paths import runtime_home
 HERE = runtime_home()
 
-FFPROBE = shutil.which("ffprobe") or "/home/abel/.local/bin/ffprobe"
-FFMPEG = shutil.which("ffmpeg") or "/home/abel/.local/bin/ffmpeg"
+FFPROBE = shutil.which("ffprobe") or "ffprobe"
+FFMPEG = shutil.which("ffmpeg") or "ffmpeg"
 
 
 def probe_dims(path):

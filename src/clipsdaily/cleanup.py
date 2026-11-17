@@ -19,6 +19,19 @@ after each cut/post):
   4. Disk guard: if free disk drops below 50 GB, the runner stops
      starting new recordings, finishes and posts what is queued,
      cleans up aggressively, and logs a warning. The disk never fills.
+  5. Queue clips (ClipForge package): files in queue/clips/ that
+     belong to posted/failed entries are deleted after
+     queue_clip_retention_days (7d). Files referenced by a
+     pending/partial entry are NEVER deleted. Unreferenced files
+     older than 48h are stale and deleted.
+  6. Queue work dirs + IG outbox (ClipForge package): queue/work/<id>
+     dirs for entries that are no longer pending/partial are deleted;
+     ig-outbox/<id> dirs are deleted 7d after the Reel posted
+     (.posted exists). A staged (unposted) outbox dir is NEVER
+     deleted — an unposted clip is never thrown away.
+  7. VOD downloads (ClipForge package): video files in vod/ older
+     than vod_retention_days (7d) are deleted; chat JSONs are kept
+     (they are small and the maintainer reuses them).
 
 Usage:
   python3 cleanup.py            # one pass, prints what was freed
@@ -38,6 +51,9 @@ DISK_PRESSURE_GB = 100    # below this: delete posted clips older than 1h
 POSTED_MAX_AGE_HOURS = 24
 UNPOSTED_MAX_AGE_HOURS = 48
 LOG_MAX_AGE_DAYS = 7
+QUEUE_CLIP_RETENTION_DAYS = 7   # queue/clips of posted/failed entries
+IG_OUTBOX_RETENTION_DAYS = 7    # ig-outbox dirs after the Reel posted
+VOD_RETENTION_DAYS = 7          # video files in vod/ (chat JSONs kept)
 
 
 def disk_free_gb(path=HERE):
@@ -174,6 +190,143 @@ def cleanup_temps():
     return freed
 
 
+def _queue_entries():
+    """(entries, protected_paths): queue.json entries + the set of
+    clip files a pending/partial entry still needs. Missing or
+    unreadable queue.json means nothing is protected (fail open for
+    deletion would be wrong — callers treat that as 'delete nothing
+    that looks referenced')."""
+    qf = HERE / "queue" / "queue.json"
+    try:
+        entries = json.loads(qf.read_text())
+    except Exception:
+        return [], set()
+    protected = set()
+    for e in entries:
+        if not isinstance(e, dict):
+            continue
+        if e.get("status") in ("pending", "partial"):
+            for key in ("clip30", "tiktok"):
+                v = e.get(key)
+                if v:
+                    protected.add(str(v))
+                    protected.add(str(Path(v).with_suffix(".srt")))
+    return entries, protected
+
+
+def cleanup_queue_clips(config=None):
+    """Rule 5: queue/clips retention. Posted/failed entries' files go
+    after queue_clip_retention_days; unreferenced files go after 48h;
+    files a pending/partial entry needs are never touched."""
+    cfg = config or {}
+    retention_days = cfg.get("queue_clip_retention_days",
+                             QUEUE_CLIP_RETENTION_DAYS)
+    freed = 0
+    entries, protected = _queue_entries()
+    done_ids = {str(e.get("id")) for e in entries
+                if isinstance(e, dict)
+                and e.get("status") in ("posted", "failed")}
+    clips_dir = HERE / "queue" / "clips"
+    if not clips_dir.exists():
+        return 0
+    for clip in list(clips_dir.glob("*.mp4")):
+        if str(clip) in protected:
+            continue
+        # Whose file is this? "<clip_id>_30s.mp4" or "<clip_id>_tiktok.mp4".
+        stem = clip.name
+        owner_done = any(stem.startswith(i + "_") for i in done_ids)
+        age = _age_hours(clip)
+        if owner_done:
+            if age < retention_days * 24:
+                continue
+        else:
+            if age < UNPOSTED_MAX_AGE_HOURS:
+                continue
+        freed += _delete(clip)
+        freed += _delete(clip.with_suffix(".srt"))
+        print(f"[cleanup] deleted queue clip {clip.name} (age {age:.1f}h)",
+              flush=True)
+    return freed
+
+
+def cleanup_queue_work(config=None):
+    """Rule 6a: queue/work/<clip_id> dirs for entries that are no
+    longer pending/partial (their cut is done or abandoned)."""
+    _, protected = _queue_entries()
+    entries, _ = _queue_entries()
+    live_ids = {str(e.get("id")) for e in entries
+                if isinstance(e, dict)
+                and e.get("status") in ("pending", "partial")}
+    work_dir = HERE / "queue" / "work"
+    if not work_dir.exists():
+        return 0
+    freed = 0
+    for d in list(work_dir.iterdir()):
+        if not d.is_dir():
+            continue
+        if d.name in live_ids:
+            continue
+        for p in d.rglob("*"):
+            if p.is_file():
+                freed += _delete(p)
+        try:
+            d.rmdir()
+        except OSError:
+            pass
+    return freed
+
+
+def cleanup_ig_outbox(config=None):
+    """Rule 6b: ig-outbox/<clip_id> dirs 7d after the Reel posted
+    (.posted exists and is old). A staged (unposted) dir is NEVER
+    deleted — an unposted clip is never thrown away."""
+    cfg = config or {}
+    retention_days = cfg.get("ig_outbox_retention_days",
+                             IG_OUTBOX_RETENTION_DAYS)
+    outbox = HERE / "ig-outbox"
+    if not outbox.exists():
+        return 0
+    freed = 0
+    for d in list(outbox.iterdir()):
+        if not d.is_dir():
+            continue
+        posted = d / ".posted"
+        if not posted.exists():
+            continue
+        if _age_hours(posted) < retention_days * 24:
+            continue
+        for p in d.rglob("*"):
+            if p.is_file():
+                freed += _delete(p)
+        try:
+            d.rmdir()
+        except OSError:
+            pass
+        print(f"[cleanup] deleted posted ig-outbox {d.name}", flush=True)
+    return freed
+
+
+def cleanup_vod(config=None):
+    """Rule 7: video files in vod/ older than vod_retention_days.
+    Chat JSONs are kept (small, reused by the maintainer)."""
+    cfg = config or {}
+    retention_days = cfg.get("vod_retention_days", VOD_RETENTION_DAYS)
+    vod_dir = HERE / "vod"
+    if not vod_dir.exists():
+        return 0
+    freed = 0
+    for p in list(vod_dir.iterdir()):
+        if not p.is_file():
+            continue
+        if p.suffix.lower() not in (".mp4", ".ts", ".mkv", ".webm"):
+            continue
+        if _age_hours(p) < retention_days * 24:
+            continue
+        freed += _delete(p)
+        print(f"[cleanup] deleted old VOD file {p.name}", flush=True)
+    return freed
+
+
 def run_cleanup(config=None, aggressive=False):
     """One full pass. Returns (bytes freed, free GB after). Logs a
     summary line to logs/cleanup.log."""
@@ -183,6 +336,10 @@ def run_cleanup(config=None, aggressive=False):
     freed += cleanup_clips(aggressive=aggressive)
     freed += cleanup_recordings_backstop(retention)
     freed += cleanup_temps()
+    freed += cleanup_queue_clips(cfg)
+    freed += cleanup_queue_work(cfg)
+    freed += cleanup_ig_outbox(cfg)
+    freed += cleanup_vod(cfg)
     free = disk_free_gb()
     msg = (f"{time.strftime('%Y-%m-%dT%H:%M:%S')} freed "
            f"{freed / 1024 / 1024:.1f} MB, free disk now {free:.1f} GB"

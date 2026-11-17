@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
-"""clipsdaily watchdog + health alerts.
+"""ClipForge watchdog + health alerts.
 
-Watches the three live tmux sessions (runner, hourly poster, queue
-maintainer) and restarts any that died. Every 30 minutes verifies each
-platform actually posted recently, using only on-disk evidence, and
-writes health.json. A NEW failure appends one alert line to
-logs/health-alerts.log (one alert per failure episode; re-alerts only
-after a recovery).
+Watches the ClipForge systemd user units (runner, hourly poster, queue
+maintainer, IG worker) and restarts any that is not active. Every 30
+minutes verifies each platform actually posted recently, using only
+on-disk evidence, and writes health.json. A NEW failure appends one
+alert line to logs/health-alerts.log (one alert per failure episode;
+re-alerts only after a recovery) and notifies via the configured
+channel (see notifier.py; default is log-only).
 
-Run as abel (the tmux server belongs to abel). Modes:
+Run as the user who owns the units. Modes:
   (default)  loop forever: 60s watchdog cycle, health check every 30 min
   --once     one watchdog + health pass, then exit (testing / cron)
   --test-detect
-             prove the dead-session path works with a throwaway
-             session named clipsdaily-watchdog-test; never touches
-             the real sessions.
+             prove the dead-unit path works with a throwaway unit
+             named clipforge-watchdog-test; never touches the real units.
 """
 import argparse
 import json
@@ -24,32 +24,36 @@ import subprocess
 import sys
 import time
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
-BASE = os.path.dirname(os.path.abspath(__file__))
+from .branding import BRAND_SLUG
+from .paths import runtime_home
+
+BASE = str(runtime_home())
 NY = ZoneInfo("America/New_York")
 LOGS = os.path.join(BASE, "logs")
 HEALTH_FILE = os.path.join(BASE, "health.json")
 STATE_FILE = os.path.join(BASE, "watchdog-state.json")
 ALERTS_FILE = os.path.join(LOGS, "health-alerts.log")
 
-# (session name, process pattern, start command). The $(date ...) in the
-# start commands is expanded by the pane's shell at restart time, so the
-# log file always matches the restart day. These are the exact commands
-# the sessions were started with on 2026-11-16 (verified via tmux
-# list-panes pane_start_command).
-SESSIONS = {
-    "clipsdaily": {
-        "proc": "python3 runner.py",
-        "start": "cd /home/abel/clipsdaily && python3 runner.py 2>&1 | tee -a logs/runner-$(date +%Y%m%d).log",
+# (unit name, start command). Units are systemd user units installed by
+# the ClipForge installer; Restart=on-failure already restarts a
+# crashed process, and this watchdog is the second layer: it catches a
+# unit that is stopped, failed, or stuck (e.g. after a bad deploy or a
+# manual stop nobody resumed). Unit names come from the brand slug.
+UNITS = {
+    "%s-runner" % BRAND_SLUG: {
+        "start": "%s run" % BRAND_SLUG,
     },
-    "clipsdaily-hourly": {
-        "proc": "python3 hourly_poster.py",
-        "start": "cd /home/abel/clipsdaily && python3 hourly_poster.py 2>&1 | tee -a logs/hourly-$(date +%Y%m%d).log",
+    "%s-hourly" % BRAND_SLUG: {
+        "start": "%s post hourly" % BRAND_SLUG,
     },
-    "clipsdaily-queue": {
-        "proc": "python3 queue_seed.py --maintain",
-        "start": "cd /home/abel/clipsdaily && python3 queue_seed.py --maintain 2>&1 | tee -a logs/queue-$(date +%Y%m%d).log",
+    "%s-queue" % BRAND_SLUG: {
+        "start": "%s queue maintain" % BRAND_SLUG,
+    },
+    "%s-ig" % BRAND_SLUG: {
+        "start": "%s ig post" % BRAND_SLUG,
     },
 }
 
@@ -73,30 +77,27 @@ def run(cmd, timeout=30):
         return -1, "", str(e)
 
 
-def session_alive(name, proc):
-    rc, _, _ = run(["tmux", "has-session", "-t", name])
-    if rc != 0:
-        return False, "no tmux session %s" % name
-    rc, out, _ = run(["pgrep", "-f", proc])
-    if rc != 0 or not out:
-        return False, "session %s exists but process '%s' is gone" % (name, proc)
-    return True, "session %s alive (pid %s)" % (name, out.split()[0])
+def session_alive(name, proc=None):
+    """Kept name for callers: checks a systemd unit, not a tmux session.
+    Returns (alive, detail). proc is ignored (systemd tracks the process)."""
+    rc, out, _ = run(["systemctl", "--user", "is-active", name])
+    if rc == 0 and out.strip() == "active":
+        return True, "unit %s active" % name
+    return False, "unit %s is %s" % (name, out.strip() or "unknown")
 
 
-def ensure_session(name, proc, start):
-    """Check one session; restart it if dead. Returns (status, detail)."""
-    alive, detail = session_alive(name, proc)
+def ensure_session(name, proc=None, start=None):
+    """Check one unit; restart it if not active. Returns (status, detail)."""
+    alive, detail = session_alive(name)
     if alive:
         return "alive", detail
-    log("WATCHDOG %s dead: %s; restarting" % (name, detail))
-    # Never leave a duplicate: kill any remnant, then start fresh.
-    run(["tmux", "kill-session", "-t", name])
-    rc, _, err = run(["tmux", "new-session", "-d", "-s", name, start])
+    log("WATCHDOG %s not active: %s; restarting" % (name, detail))
+    rc, _, err = run(["systemctl", "--user", "restart", name])
     if rc != 0:
         log("WATCHDOG %s restart FAILED: %s" % (name, err))
         return "failed", "restart failed: %s" % err
     time.sleep(2)
-    alive2, detail2 = session_alive(name, proc)
+    alive2, detail2 = session_alive(name)
     if alive2:
         log("WATCHDOG %s restarted OK: %s" % (name, detail2))
         return "restarted", detail2
@@ -105,10 +106,10 @@ def ensure_session(name, proc, start):
 
 
 def watchdog_pass():
-    """Check all three sessions. Returns {name: (status, detail)}."""
+    """Check all units. Returns {name: (status, detail)}."""
     out = {}
-    for name, cfg in SESSIONS.items():
-        out[name] = ensure_session(name, cfg["proc"], cfg["start"])
+    for name in UNITS:
+        out[name] = ensure_session(name)
     return out
 
 
@@ -268,6 +269,11 @@ def alert(platform, detail):
     with open(ALERTS_FILE, "a") as f:
         f.write(line + "\n")
     log("HEALTH ALERT %s: %s" % (platform, detail))
+    try:
+        from .notifier import notify_alert
+        notify_alert(platform, detail)
+    except Exception as e:
+        log("NOTIFY failed (alert still logged): %s" % e)
 
 
 def health_pass(sessions):
@@ -292,7 +298,7 @@ def health_pass(sessions):
         "tiktok": {"status": tt_status,
                    "last_failure": tt_last.isoformat() if tt_last else None,
                    "detail": tt_detail},
-        "watchdog": {"sessions": {n: s[0] for n, s in sessions.items()}},
+        "watchdog": {"units": {n: s[0] for n, s in sessions.items()}},
     }
 
     # One alert per failure episode: alert only on healthy/idle -> unhealthy.
@@ -319,29 +325,57 @@ def health_pass(sessions):
 
 
 def test_detect():
-    """Prove the dead-session path with a throwaway session."""
-    name, proc, start = "clipsdaily-watchdog-test", "sleep 120", "sleep 120"
-    run(["tmux", "kill-session", "-t", name])
-    print("TEST 1: session missing -> ensure_session should create it")
-    st, detail = ensure_session(name, proc, start)
-    print("  -> %s: %s" % (st, detail))
-    assert st == "restarted", "expected restart, got %s" % st
-    rc, _, _ = run(["tmux", "has-session", "-t", name])
-    assert rc == 0, "test session not running after create"
-    print("TEST 2: kill the session -> ensure_session should recreate it")
-    run(["tmux", "kill-session", "-t", name])
-    time.sleep(1)
-    st, detail = ensure_session(name, proc, start)
-    print("  -> %s: %s" % (st, detail))
-    assert st == "restarted", "expected restart, got %s" % st
-    print("TEST 3: session alive -> ensure_session must NOT duplicate")
-    st, detail = ensure_session(name, proc, start)
-    print("  -> %s: %s" % (st, detail))
-    assert st == "alive", "expected alive, got %s" % st
-    rc, out, _ = run(["tmux", "list-sessions", "-F", "#{session_name}"])
-    assert out.splitlines().count(name) == 1, "duplicate test session!"
-    run(["tmux", "kill-session", "-t", name])
-    print("TEST PASS: dead-session detection + restart + no-duplicate proven")
+    """Prove the dead-unit path with a throwaway unit.
+
+    Creates clipforge-watchdog-test.service (sleep 120) in the user
+    systemd dir, then: missing -> restart fails gracefully (no crash);
+    stopped -> restart brings it back; alive -> no duplicate restart.
+    Cleans the unit file up afterwards. Never touches the real units.
+    """
+    import shutil
+    name = "%s-watchdog-test" % BRAND_SLUG
+    unit_dir = Path.home() / ".config" / "systemd" / "user"
+    unit_path = unit_dir / (name + ".service")
+    unit_body = ("[Unit]\nDescription=ClipForge watchdog test unit\n\n"
+                 "[Service]\nExecStart=/bin/sleep 120\n\n"
+                 "[Install]\nWantedBy=default.target\n")
+    try:
+        unit_dir.mkdir(parents=True, exist_ok=True)
+        run(["systemctl", "--user", "stop", name])
+        print("TEST 1: unit missing -> ensure_session must fail gracefully")
+        st, detail = ensure_session(name)
+        print("  -> %s: %s" % (st, detail))
+        assert st == "failed", "expected failed, got %s" % st
+        unit_path.write_text(unit_body)
+        run(["systemctl", "--user", "daemon-reload"])
+        run(["systemctl", "--user", "start", name])
+        time.sleep(1)
+        print("TEST 2: unit alive -> ensure_session must NOT restart it")
+        st, detail = ensure_session(name)
+        print("  -> %s: %s" % (st, detail))
+        assert st == "alive", "expected alive, got %s" % st
+        print("TEST 3: stop the unit -> ensure_session should restart it")
+        run(["systemctl", "--user", "stop", name])
+        time.sleep(1)
+        st, detail = ensure_session(name)
+        print("  -> %s: %s" % (st, detail))
+        assert st == "restarted", "expected restarted, got %s" % st
+        rc, out, _ = run(["systemctl", "--user", "show", name,
+                          "--property=MainPID"])
+        assert rc == 0 and out.strip() not in ("MainPID=0", ""), \
+            "test unit has no main process after restart"
+        print("TEST 4: alive again -> ensure_session must NOT duplicate")
+        st, detail = ensure_session(name)
+        print("  -> %s: %s" % (st, detail))
+        assert st == "alive", "expected alive, got %s" % st
+    finally:
+        run(["systemctl", "--user", "stop", name])
+        try:
+            unit_path.unlink()
+        except OSError:
+            pass
+        run(["systemctl", "--user", "daemon-reload"])
+    print("TEST PASS: dead-unit detection + restart + no-duplicate proven")
 
 
 def main():

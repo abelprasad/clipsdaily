@@ -34,13 +34,14 @@ import time
 import uuid
 from collections import deque
 from datetime import date
+import shutil
 from pathlib import Path
 
 import requests
 
 from .paths import runtime_home
 HERE = runtime_home()
-YT_DLP = "/home/abel/.local/bin/yt-dlp"
+YT_DLP = shutil.which("yt-dlp") or "yt-dlp"
 
 
 def detect_spikes(counts, multiplier=3.0, min_messages=20, history=30):
