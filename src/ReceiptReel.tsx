@@ -1,6 +1,7 @@
 import React from "react";
 import {
   AbsoluteFill,
+  Easing,
   interpolate,
   Sequence,
   spring,
@@ -68,13 +69,18 @@ export function getTotalFrames(script: ScriptData, fps: number): number {
 
 // ---------------------------------------------------------------------------
 // Design tokens — system fonts only, no paid assets.
+// Unslop v4: weights capped at 600 (Arial resolves to Liberation Sans on the
+// render box, which has no 600 face — Chromium renders 600 as Bold; the
+// token is capped, the raster reads bold). One accent (amber) used rarely:
+// the money that matters + the clip-coins. Coral is gone.
 // ---------------------------------------------------------------------------
 const BG = "#0B0E11";
 const PANEL = "#141A20";
+const PANEL_LINE = "rgba(237,237,237,0.08)";
 const WHITE = "#FFFFFF";
 const MUTED = "#9AA5B1";
 const AMBER = "#F5B942";
-const CORAL = "#E04A3A";
+const AMBER_DEEP = "#C98A1B";
 const FONT = "Arial, Helvetica, sans-serif";
 
 // Background palette — dark and muted on purpose, so the game layer never
@@ -84,7 +90,10 @@ const SKY_MID = "#18222E";
 const GROUND = "#0C1117";
 const GROUND_EDGE = "#1D2833";
 const LANE = "#22303C";
-const RUNNER = "#37454F";
+const RUNNER = "#4C5A54";
+const RUNNER_LIGHT = "#5B6B62";
+const MOON = "#EDE6D0";
+const WINDOW = "#E8E2D4";
 
 // Money amounts ($49/mo, $19–29/mo, $199) always render amber.
 const MONEY_RE = /(\$[0-9][0-9.,–-]*(?:\/mo)?)/g;
@@ -92,7 +101,10 @@ const MONEY_RE = /(\$[0-9][0-9.,–-]*(?:\/mo)?)/g;
 function renderMoney(text: string): React.ReactNode {
   return text.split(MONEY_RE).map((part, i) =>
     MONEY_RE.test(part) || /^\$/.test(part) ? (
-      <span key={i} style={{ color: AMBER }}>
+      <span
+        key={i}
+        style={{ color: AMBER, fontVariantNumeric: "tabular-nums" }}
+      >
         {part}
       </span>
     ) : (
@@ -109,21 +121,25 @@ const rand = (seed: number) => {
   const x = Math.sin(seed * 127.1 + 311.7) * 43758.5453;
   return x - Math.floor(x);
 };
+const smooth = (t: number) => t * t * (3 - 2 * t);
 
 // ---------------------------------------------------------------------------
 // Animated background — endless-runner scene, drawn entirely in code.
-// No ripped footage, no copyrighted assets. Layers (slow → fast):
-// stars → far skyline → mid skyline (lit windows) → ground + lane dashes
-// → scrim → runner silhouette + coins + speed lines (above the scrim so
-// the motion still reads, but small and dim enough to stay out of the
-// copy's way). All copy sits on opaque panels, the caption pill, or the
-// scrim — legibility is structural, not luck.
+// No ripped footage, no copyrighted assets. Depths (slow → fast): stars →
+// far skyline → mid skyline (lit windows) → ground + lane dashes → foreground
+// posts → scrim → runner + coins + speed lines (above the scrim so the
+// motion still reads, but small and dim enough to stay out of the copy's
+// way). All copy sits on opaque panels, the caption pill, or the scrim —
+// legibility is structural, not luck. World: a streamer's city at 2 a.m.
+// after the stream ends. Signature: the clip-coin trail.
 // ---------------------------------------------------------------------------
 type Building = {
   x: number;
   w: number;
   h: number;
-  windows: { dx: number; dy: number }[];
+  antenna: boolean;
+  step: boolean;
+  windows: { dx: number; dy: number; s: number }[];
 };
 
 const buildSkyline = (
@@ -140,16 +156,24 @@ const buildSkyline = (
   for (let i = 0; i < count; i++) {
     const w = minW + rand(seedBase + i * 3) * (maxW - minW);
     const h = minH + rand(seedBase + i * 3 + 1) * (maxH - minH);
-    const windows: { dx: number; dy: number }[] = [];
+    const windows: { dx: number; dy: number; s: number }[] = [];
     if (withWindows) {
       for (let k = 0; k < 3; k++) {
         windows.push({
           dx: 12 + rand(seedBase + i * 17 + k * 5) * Math.max(10, w - 26),
           dy: 18 + rand(seedBase + i * 17 + k * 5 + 1) * Math.max(10, h - 50),
+          s: 6 + rand(seedBase + i * 17 + k * 5 + 2) * 3,
         });
       }
     }
-    buildings.push({ x, w, h, windows });
+    buildings.push({
+      x,
+      w,
+      h,
+      antenna: rand(seedBase + i * 13) > 0.7,
+      step: rand(seedBase + i * 19) > 0.6,
+      windows,
+    });
     x += w + 8 + rand(seedBase + i * 3 + 2) * 30;
   }
   return { buildings, width: x };
@@ -167,24 +191,37 @@ const STARS = Array.from({ length: 36 }, (_, i) => ({
   speed: 0.3 + rand(900 + i * 7 + 4) * 0.9,
 }));
 
+// Speed lines live in the runner band only, and fade in/out over travel.
 const SPEED_LINES = Array.from({ length: 10 }, (_, i) => ({
   x0: rand(700 + i * 11) * 1300,
-  y: 160 + rand(700 + i * 11 + 1) * 1550,
-  len: 80 + rand(700 + i * 11 + 2) * 130,
+  y: 1240 + rand(700 + i * 11 + 1) * 460,
+  len: 80 + rand(700 + i * 11 + 2) * 140,
+  w: 2 + rand(700 + i * 11 + 5) * 2,
   speed: 12 + rand(700 + i * 11 + 3) * 7,
-  o: 0.04 + rand(700 + i * 11 + 4) * 0.05,
+  o: 0.05 + rand(700 + i * 11 + 4) * 0.04,
+}));
+
+// Foreground posts — the fastest depth, dark silhouettes at the bottom edge.
+const FOREGROUND = Array.from({ length: 5 }, (_, i) => ({
+  x0: i * 320 + rand(600 + i) * 80,
+  h: 160 + rand(600 + i + 1) * 100,
+  speed: 14,
 }));
 
 const COINS_TOP = Array.from({ length: 5 }, (_, i) => ({
   x0: i * 260 + rand(300 + i) * 80,
-  y: 322,
+  y: 252,
   speed: 6,
+  size: 28 + (i % 3) * 4,
+  phase: i * 1.3,
 }));
 
 const COINS_GROUND = Array.from({ length: 6 }, (_, i) => ({
   x0: i * 240 + rand(400 + i) * 60,
   y: 1510,
   speed: 9,
+  size: 28 + (i % 3) * 4,
+  phase: i * 1.7,
 }));
 
 const SkylineLayer: React.FC<{
@@ -217,6 +254,43 @@ const SkylineLayer: React.FC<{
               backgroundColor: color,
             }}
           >
+            {b.antenna ? (
+              <>
+                <div
+                  style={{
+                    position: "absolute",
+                    left: b.w / 2 - 1,
+                    top: -26,
+                    width: 3,
+                    height: 26,
+                    backgroundColor: color,
+                  }}
+                />
+                <div
+                  style={{
+                    position: "absolute",
+                    left: b.w / 2 - 3,
+                    top: -30,
+                    width: 6,
+                    height: 6,
+                    borderRadius: "50%",
+                    backgroundColor: color,
+                  }}
+                />
+              </>
+            ) : null}
+            {b.step ? (
+              <div
+                style={{
+                  position: "absolute",
+                  left: b.w * 0.22,
+                  top: -26,
+                  width: b.w * 0.56,
+                  height: 26,
+                  backgroundColor: color,
+                }}
+              />
+            ) : null}
             {b.windows.map((wn, j) => (
               <div
                 key={j}
@@ -224,11 +298,11 @@ const SkylineLayer: React.FC<{
                   position: "absolute",
                   left: wn.dx,
                   top: wn.dy,
-                  width: 7,
-                  height: 9,
+                  width: wn.s,
+                  height: wn.s + 2,
                   borderRadius: 2,
-                  backgroundColor: AMBER,
-                  opacity: 0.28,
+                  backgroundColor: WINDOW,
+                  opacity: 0.2,
                 }}
               />
             ))}
@@ -239,90 +313,231 @@ const SkylineLayer: React.FC<{
   </>
 );
 
-// Simple geometric runner silhouette — thick round-capped limbs, legs and
-// arms swinging in opposite phase, small hop on each stride. Abstract on
-// purpose: it reads as motion at small size without pretending to be art.
+// ---------------------------------------------------------------------------
+// Run cycle — pose-to-pose keyframes, 4 poses per stride (18 frames).
+// Angles in degrees; positive = swung forward of vertical. Two-segment
+// limbs: shin trails the thigh by most of the knee bend, forearm angle is
+// absolute (folded forward across the body). Squash & stretch: the body
+// compresses at contact (lift 0) and extends in the air (lift 10).
+// ---------------------------------------------------------------------------
+type RunPose = {
+  hipF: number;
+  kneeF: number;
+  hipB: number;
+  kneeB: number;
+  shF: number;
+  faF: number;
+  shB: number;
+  faB: number;
+  lean: number;
+  lift: number;
+};
+
+const RUN_POSES: RunPose[] = [
+  // contact, right foot strikes
+  { hipF: 38, kneeF: 8, hipB: -32, kneeB: 55, shF: -30, faF: 10, shB: 28, faB: 55, lean: 10, lift: 0 },
+  // passing, right foot under the body
+  { hipF: 5, kneeF: 35, hipB: -10, kneeB: 95, shF: -10, faF: 25, shB: 8, faB: 45, lean: 8, lift: 10 },
+  // contact, left foot strikes
+  { hipF: -32, kneeF: 55, hipB: 38, kneeB: 8, shF: 28, faF: 55, shB: -30, faB: 10, lean: 10, lift: 0 },
+  // passing, left foot under the body
+  { hipF: -10, kneeF: 95, hipB: 5, kneeB: 35, shF: 8, faF: 45, shB: -10, faB: 25, lean: 8, lift: 10 },
+];
+
+const CYCLE_FRAMES = 18;
+
+function poseAt(frame: number): RunPose {
+  const phase = mod(frame, CYCLE_FRAMES) / CYCLE_FRAMES;
+  const scaled = phase * 4;
+  const i = Math.floor(scaled) % 4;
+  const j = (i + 1) % 4;
+  const t = smooth(scaled - Math.floor(scaled));
+  const a = RUN_POSES[i];
+  const b = RUN_POSES[j];
+  const out = {} as RunPose;
+  (Object.keys(a) as (keyof RunPose)[]).forEach((k) => {
+    out[k] = a[k] + (b[k] - a[k]) * t;
+  });
+  return out;
+}
+
+// Endpoint of a limb segment: origin, angle in degrees from straight down.
+const limb = (x: number, y: number, deg: number, len: number) => {
+  const r = (deg * Math.PI) / 180;
+  return { x: x + Math.sin(r) * len, y: y + Math.cos(r) * len };
+};
+
+// The ClipForge courier: forward lean, cap, and a clip satchel with a play
+// mark that swings against the stride (secondary motion). Hand-made wobble:
+// a slow ±1.2° sway on top of the lean, so no two strides are identical.
 const RunnerFigure: React.FC<{ frame: number }> = ({ frame }) => {
-  const t = frame * 0.34;
-  const bob = -Math.abs(Math.sin(t)) * 12;
-  const legSwing = Math.sin(t) * 40;
-  const armSwing = Math.sin(t + Math.PI) * 34;
+  const p = poseAt(frame);
+  const phase = mod(frame, CYCLE_FRAMES) / CYCLE_FRAMES;
+  const wobble = 1.2 * Math.sin(frame * 0.11);
+  const sy = 0.95 + 0.08 * (p.lift / 10);
+  const sx = 1.05 - 0.05 * (p.lift / 10);
+  const satchelSwing = -7 * Math.sin(phase * Math.PI * 2);
+
+  const hip = { x: -6, y: 104 };
+  const shoulder = { x: -2, y: 48 };
+  const kneeF = limb(hip.x, hip.y, p.hipF, 52);
+  const footF = limb(kneeF.x, kneeF.y, p.hipF - p.kneeF * 0.9, 52);
+  const kneeB = limb(hip.x, hip.y, p.hipB, 52);
+  const footB = limb(kneeB.x, kneeB.y, p.hipB - p.kneeB * 0.9, 52);
+  const elbowF = limb(shoulder.x, shoulder.y, p.shF, 34);
+  const handF = limb(elbowF.x, elbowF.y, p.faF, 32);
+  const elbowB = limb(shoulder.x, shoulder.y, p.shB, 34);
+  const handB = limb(elbowB.x, elbowB.y, p.faB, 32);
+
+  const seg = (
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
+    w: number,
+  ) => (
+    <line
+      x1={x1}
+      y1={y1}
+      x2={x2}
+      y2={y2}
+      stroke={RUNNER}
+      strokeWidth={w}
+      strokeLinecap="round"
+    />
+  );
+
   return (
     <svg
-      width={170}
-      height={230}
-      viewBox="0 0 170 230"
+      width={200}
+      height={260}
+      viewBox="0 0 200 260"
       style={{ overflow: "visible" }}
     >
-      <g transform={`translate(85, 8) rotate(7) translate(0, ${bob})`}>
+      <g
+        transform={`translate(100, 10) rotate(${p.lean + wobble}) translate(0, ${-p.lift}) scale(${sx}, ${sy})`}
+      >
+        {/* satchel — behind the torso, swings against the stride */}
+        <g transform={`rotate(${satchelSwing} -18 104)`}>
+          <line
+            x1={-2}
+            y1={52}
+            x2={-24}
+            y2={96}
+            stroke={RUNNER_LIGHT}
+            strokeWidth={4}
+            strokeLinecap="round"
+          />
+          <rect
+            x={-38}
+            y={88}
+            width={26}
+            height={32}
+            rx={6}
+            fill={RUNNER_LIGHT}
+          />
+          <path d="M -29 98 L -29 110 L -19 104 Z" fill={WHITE} opacity={0.9} />
+        </g>
+        {/* legs — two segments each, knee bends */}
+        {seg(hip.x, hip.y, kneeB.x, kneeB.y, 15)}
+        {seg(kneeB.x, kneeB.y, footB.x, footB.y, 13)}
+        {seg(hip.x, hip.y, kneeF.x, kneeF.y, 15)}
+        {seg(kneeF.x, kneeF.y, footF.x, footF.y, 13)}
+        {/* torso */}
+        {seg(0, 40, hip.x, hip.y, 22)}
+        {/* arms — two segments each, elbows bent */}
+        {seg(shoulder.x, shoulder.y, elbowB.x, elbowB.y, 13)}
+        {seg(elbowB.x, elbowB.y, handB.x, handB.y, 11)}
+        {seg(shoulder.x, shoulder.y, elbowF.x, elbowF.y, 13)}
+        {seg(elbowF.x, elbowF.y, handF.x, handF.y, 11)}
+        {/* head + cap */}
         <circle cx={4} cy={16} r={15} fill={RUNNER} />
-        <line
-          x1={0}
-          y1={34}
-          x2={-8}
-          y2={102}
-          stroke={RUNNER}
-          strokeWidth={22}
-          strokeLinecap="round"
-        />
-        <line
-          x1={-2}
-          y1={48}
-          x2={-38}
-          y2={84}
-          stroke={RUNNER}
-          strokeWidth={13}
-          strokeLinecap="round"
-          transform={`rotate(${-armSwing} -2 48)`}
-        />
-        <line
-          x1={-2}
-          y1={48}
-          x2={34}
-          y2={88}
-          stroke={RUNNER}
-          strokeWidth={13}
-          strokeLinecap="round"
-          transform={`rotate(${armSwing} -2 48)`}
-        />
-        <line
-          x1={-8}
-          y1={102}
-          x2={-44}
-          y2={168}
-          stroke={RUNNER}
-          strokeWidth={15}
-          strokeLinecap="round"
-          transform={`rotate(${-legSwing} -8 102)`}
-        />
-        <line
-          x1={-8}
-          y1={102}
-          x2={40}
-          y2={172}
-          stroke={RUNNER}
-          strokeWidth={15}
-          strokeLinecap="round"
-          transform={`rotate(${legSwing} -8 102)`}
-        />
+        <path d="M -11 14 A 15 15 0 0 1 19 14 Z" fill={RUNNER} />
+        <rect x={12} y={10} width={18} height={6} rx={3} fill={RUNNER} />
       </g>
     </svg>
   );
 };
 
+// A clip-coin: flat amber disc, flat darker ring, white play triangle.
+// Spins (scaleX) AND bobs — secondary motion, not just a scroll.
+const Coin: React.FC<{
+  frame: number;
+  x: number;
+  y: number;
+  size: number;
+  speed: number;
+  phase: number;
+  index: number;
+}> = ({ frame, x, y, size, speed, phase, index }) => {
+  const left = mod(x - frame * speed, 1240) - 80;
+  const spin = Math.abs(Math.cos(frame * 0.12 + phase));
+  const bob = Math.sin(frame * 0.15 + phase) * 6;
+  return (
+    <div
+      key={index}
+      style={{
+        position: "absolute",
+        left,
+        top: y + bob,
+        width: size,
+        height: size,
+        borderRadius: "50%",
+        backgroundColor: AMBER,
+        opacity: 0.85,
+        transform: `scaleX(${0.25 + 0.75 * spin})`,
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          inset: 4,
+          borderRadius: "50%",
+          border: `3px solid ${AMBER_DEEP}`,
+        }}
+      />
+      <svg
+        width={size * 0.36}
+        height={size * 0.36}
+        viewBox="0 0 12 12"
+        style={{
+          position: "absolute",
+          left: "50%",
+          top: "50%",
+          transform: "translate(-42%, -50%)",
+        }}
+      >
+        <path d="M 2 1 L 11 6 L 2 11 Z" fill={WHITE} />
+      </svg>
+    </div>
+  );
+};
+
 const RunnerBackground: React.FC = () => {
   const frame = useCurrentFrame();
-  const farX = -(mod(frame * 1.2, FAR.width));
-  const midX = -(mod(frame * 3.5, MID.width));
+  const farX = -mod(frame * 1.2, FAR.width);
+  const midX = -mod(frame * 3.5, MID.width);
   return (
     <AbsoluteFill style={{ overflow: "hidden" }}>
-      {/* sky */}
+      {/* sky — flat ink, no gradient wash */}
       <div
         style={{
           position: "absolute",
           inset: 0,
-          background:
-            "linear-gradient(180deg, #0B0E11 0%, #0E141B 55%, #111A22 100%)",
+          backgroundColor: BG,
+        }}
+      />
+      {/* moon — one flat disc, the sky's subject */}
+      <div
+        style={{
+          position: "absolute",
+          left: 860,
+          top: 180,
+          width: 84,
+          height: 84,
+          borderRadius: "50%",
+          backgroundColor: MOON,
+          opacity: 0.85,
         }}
       />
       {/* stars, slow drift */}
@@ -341,10 +556,22 @@ const RunnerBackground: React.FC = () => {
           }}
         />
       ))}
-      {/* skylines, parallax */}
+      {/* skylines, two depths */}
       <SkylineLayer data={FAR} color={SKY_FAR} offset={farX} />
       <SkylineLayer data={MID} color={SKY_MID} offset={midX} />
-      {/* ground + lane dashes, fast */}
+      {/* dusk band — one flat strip at the horizon, barely there */}
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          top: 1400,
+          height: 96,
+          backgroundColor: AMBER,
+          opacity: 0.05,
+        }}
+      />
+      {/* ground + lane dashes, fast — dash lengths vary */}
       <div
         style={{
           position: "absolute",
@@ -363,10 +590,25 @@ const RunnerBackground: React.FC = () => {
             position: "absolute",
             left: mod(i * 160 - frame * 9, 1440) - 160,
             top: 1640,
-            width: 90,
+            width: 72 + rand(i * 7) * 40,
             height: 8,
             borderRadius: 4,
             backgroundColor: LANE,
+          }}
+        />
+      ))}
+      {/* foreground posts — fastest depth */}
+      {FOREGROUND.map((p, i) => (
+        <div
+          key={i}
+          style={{
+            position: "absolute",
+            left: mod(p.x0 - frame * p.speed, 1440) - 80,
+            top: 1920 - p.h,
+            width: 14,
+            height: p.h,
+            backgroundColor: "#05070A",
+            opacity: 0.9,
           }}
         />
       ))}
@@ -383,65 +625,64 @@ const RunnerBackground: React.FC = () => {
       <div
         style={{
           position: "absolute",
-          left: 140,
+          left: 120,
           top: 1360,
           opacity: 0.95,
+          transform: "scale(1.2)",
+          transformOrigin: "bottom left",
         }}
       >
         <RunnerFigure frame={frame} />
       </div>
-      {/* coins — two lanes, spin as they scroll */}
-      {[...COINS_TOP, ...COINS_GROUND].map((c, i) => {
-        const x = mod(c.x0 - frame * c.speed, 1240) - 80;
-        const spin = Math.abs(Math.cos(frame * 0.12 + i * 1.3));
+      {/* clip-coins — two lanes, spin and bob as they scroll */}
+      {[...COINS_TOP, ...COINS_GROUND].map((c, i) => (
+        <Coin
+          key={i}
+          frame={frame}
+          x={c.x0}
+          y={c.y}
+          size={c.size}
+          speed={c.speed}
+          phase={c.phase}
+          index={i}
+        />
+      ))}
+      {/* speed lines — streak and fade as they travel, runner band only */}
+      {SPEED_LINES.map((l, i) => {
+        const p = mod(l.x0 - frame * l.speed, 1400) / 1400;
         return (
           <div
             key={i}
             style={{
               position: "absolute",
-              left: x,
-              top: c.y,
-              width: 34,
-              height: 34,
-              borderRadius: "50%",
-              background:
-                "radial-gradient(circle at 35% 35%, #FFD97A, #F5B942 60%, #C98A1B)",
-              opacity: 0.8,
-              transform: `scaleX(${0.35 + 0.65 * spin})`,
+              left: p * 1400 - 160,
+              top: l.y,
+              width: l.len,
+              height: l.w,
+              borderRadius: 2,
+              backgroundColor: WHITE,
+              opacity: Math.min(0.12, l.o * Math.sin(Math.PI * p) * 2),
             }}
           />
         );
       })}
-      {/* speed lines */}
-      {SPEED_LINES.map((l, i) => (
-        <div
-          key={i}
-          style={{
-            position: "absolute",
-            left: mod(l.x0 - frame * l.speed, 1400) - 160,
-            top: l.y,
-            width: l.len,
-            height: 3,
-            borderRadius: 2,
-            backgroundColor: WHITE,
-            opacity: l.o,
-          }}
-        />
-      ))}
     </AbsoluteFill>
   );
 };
 
 // ---------------------------------------------------------------------------
-// Kinetic text.
-// - "fade": the v2 entrance (opacity + rise). Alt lines keep this.
-// - "slide": receipt rows slide in from the right, one per beat.
-// - "slam": the total scales down hard with an overshoot settle.
+// Kinetic text — one entrance pattern per scene, no linear moves left except
+// constant-velocity world scroll (the runner runs at constant speed).
+// - "fade": rise on a damped spring (slight overshoot), opacity eased out.
+// - "slide": receipt rows wind up and overshoot, then settle.
+// - "slam": the total / CTA wordmark scale down hard, squash on landing.
 // NOTE: useCurrentFrame() is relative to the NEAREST <Sequence>, so `enterAt`
 // is the offset inside this line's own Sequence (0 for lines whose Sequence
 // starts exactly at their beat). Do NOT pass a global frame here — that
 // double-subtracts and the line never appears.
 // ---------------------------------------------------------------------------
+const EASE_OUT = Easing.out(Easing.cubic);
+
 const Line: React.FC<{
   enterAt?: number;
   kind?: "fade" | "slide" | "slam";
@@ -451,39 +692,48 @@ const Line: React.FC<{
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const local = Math.max(0, frame - enterAt);
-  const opacity = interpolate(local, [0, kind === "slam" ? 5 : 10], [0, 1], {
+  const opacity = interpolate(local, [0, kind === "slam" ? 5 : 8], [0, 1], {
+    easing: EASE_OUT,
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
   let transform = "";
   if (kind === "fade") {
-    const y = interpolate(local, [0, 12], [28, 0], {
-      extrapolateLeft: "clamp",
-      extrapolateRight: "clamp",
-    });
-    transform = `translateY(${y}px)`;
-  } else if (kind === "slide") {
     const s = spring({
       frame: local,
       fps,
-      config: { damping: 15, stiffness: 200, mass: 0.8 },
+      config: { damping: 13, stiffness: 220, mass: 0.8 },
     });
-    transform = `translateX(${(1 - s) * 200}px)`;
+    transform = `translateY(${(1 - s) * 28}px)`;
+  } else if (kind === "slide") {
+    // Damping 11 overshoots: the row slides past its slot, then settles.
+    const s = spring({
+      frame: local,
+      fps,
+      config: { damping: 11, stiffness: 190, mass: 0.8 },
+    });
+    transform = `translateX(${(1 - s) * 220}px)`;
   } else {
     const s = spring({
       frame: local,
       fps,
-      config: { damping: 8, stiffness: 260, mass: 0.9 },
+      config: { damping: 9, stiffness: 240, mass: 0.9 },
     });
-    transform = `scale(${1.8 - 0.8 * s})`;
+    const base = 2.2 - 1.2 * s;
+    const settle = interpolate(s, [0.85, 1], [0, 1], {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+    });
+    const bump = Math.sin(settle * Math.PI);
+    transform = `scale(${base * (1 + 0.05 * bump)}, ${base * (1 - 0.05 * bump)})`;
   }
   return (
     <div style={{ opacity, transform, ...style }}>{children}</div>
   );
 };
 
-// Hook words pop in one at a time; the $49 counts up 0 → 49 as its word
-// lands. Money words stay amber; everything else stays white.
+// Hook words pop in one at a time on varied beats, along a slight arc; the
+// $49 counts up 0 → 49 on an eased curve and squashes once as it lands.
 const HookWords: React.FC<{ text: string }> = ({ text }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -491,35 +741,49 @@ const HookWords: React.FC<{ text: string }> = ({ text }) => {
   return (
     <>
       {words.map((word, i) => {
-        const wordFrame = Math.max(0, frame - i * 5);
+        const delay = i * 5 + (i % 3) * 2;
+        const wordFrame = Math.max(0, frame - delay);
         const pop = spring({
           frame: wordFrame,
           fps,
-          config: { damping: 12, stiffness: 300, mass: 0.7 },
+          config: { damping: 10, stiffness: 280, mass: 0.7 },
         });
         const scale = 0.45 + 0.55 * pop;
+        const arc = (1 - pop) * -3;
+        const rise = (1 - pop) * 16;
         const opacity = interpolate(wordFrame, [0, 8], [0, 1], {
+          easing: EASE_OUT,
           extrapolateLeft: "clamp",
           extrapolateRight: "clamp",
         });
         const money = word.match(/^\$(\d+)(.*)$/);
         let content: React.ReactNode = word;
+        let squashX = 1;
+        let squashY = 1;
         if (money) {
           const target = parseInt(money[1], 10);
           const count = Math.round(
             interpolate(wordFrame, [0, 36], [0, target], {
+              easing: EASE_OUT,
               extrapolateLeft: "clamp",
               extrapolateRight: "clamp",
             }),
           );
           content = `$${count}${money[2]}`;
+          const land = interpolate(wordFrame, [36, 48], [0, 1], {
+            extrapolateLeft: "clamp",
+            extrapolateRight: "clamp",
+          });
+          const sq = Math.sin(land * Math.PI);
+          squashX = 1 + 0.06 * sq;
+          squashY = 1 - 0.06 * sq;
         }
         return (
           <span
             key={i}
             style={{
               display: "inline-block",
-              transform: `scale(${scale})`,
+              transform: `translateY(${rise}px) rotate(${arc}deg) scale(${scale * squashX}, ${scale * squashY})`,
               opacity,
               marginRight: i < words.length - 1 ? 24 : 0,
               color: money ? AMBER : undefined,
@@ -533,6 +797,71 @@ const HookWords: React.FC<{ text: string }> = ({ text }) => {
   );
 };
 
+// The total slams in and counts 0 → 49 on an eased curve, then squashes as
+// it settles. Same final text as the script: "Total: $49/mo".
+const TotalLine: React.FC<{ text: string }> = ({ text }) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const target = parseInt(text.match(/\$(\d+)/)?.[1] ?? "49", 10);
+  const s = spring({
+    frame,
+    fps,
+    config: { damping: 9, stiffness: 240, mass: 0.9 },
+  });
+  const count = Math.round(
+    interpolate(frame, [0, 24], [0, target], {
+      easing: EASE_OUT,
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+    }),
+  );
+  const base = 2.2 - 1.2 * s;
+  const settle = interpolate(s, [0.85, 1], [0, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  const bump = Math.sin(settle * Math.PI);
+  const opacity = interpolate(frame, [0, 5], [0, 1], {
+    easing: EASE_OUT,
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  return (
+    <div
+      style={{
+        opacity,
+        transform: `scale(${base * (1 + 0.05 * bump)}, ${base * (1 - 0.05 * bump)})`,
+        fontSize: 118,
+        fontWeight: 600,
+        color: AMBER,
+        textAlign: "center",
+        fontVariantNumeric: "tabular-nums",
+      }}
+    >
+      Total: ${count}/mo
+    </div>
+  );
+};
+
+// Drawn check — one stroke, one size, white. No glyph, no emoji.
+const Check: React.FC = () => (
+  <svg
+    width={44}
+    height={44}
+    viewBox="0 0 44 44"
+    style={{ flexShrink: 0, marginRight: 16, marginTop: 8 }}
+  >
+    <path
+      d="M8 23 L18 33 L37 12"
+      fill="none"
+      stroke={WHITE}
+      strokeWidth={6}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
 // Burned-in caption bar. Ads need captions (most viewers watch muted) —
 // this is the explicit exception to the clipsdaily no-captions rule, which
 // covers clips, not ads. Text comes from the same script.json beat.
@@ -545,9 +874,9 @@ const CaptionBar: React.FC<{ plan: BeatPlan[] }> = ({ plan }) => {
     <div
       style={{
         position: "absolute",
-        left: 60,
-        right: 60,
-        bottom: 90,
+        left: 64,
+        right: 64,
+        bottom: 88,
         display: "flex",
         justifyContent: "center",
         pointerEvents: "none",
@@ -556,11 +885,11 @@ const CaptionBar: React.FC<{ plan: BeatPlan[] }> = ({ plan }) => {
       <div
         style={{
           backgroundColor: "rgba(0,0,0,0.62)",
-          borderRadius: 18,
-          padding: "22px 34px",
+          borderRadius: 16,
+          padding: "20px 32px",
           fontFamily: FONT,
           fontSize: 42,
-          fontWeight: 700,
+          fontWeight: 600,
           lineHeight: 1.25,
           color: WHITE,
           textAlign: "center",
@@ -576,9 +905,9 @@ const sceneLabel = (text: string) => (
   <div
     style={{
       fontFamily: FONT,
-      fontSize: 44,
-      fontWeight: 900,
-      letterSpacing: 10,
+      fontSize: 40,
+      fontWeight: 600,
+      letterSpacing: 2,
       color: MUTED,
     }}
   >
@@ -588,7 +917,6 @@ const sceneLabel = (text: string) => (
 
 export const ReceiptReel: React.FC<ReceiptReelProps> = ({ script }) => {
   const { fps } = useVideoConfig();
-  const frame = useCurrentFrame();
   const plan = getBeatPlan(script, fps);
   const byId = (id: string) => plan.find((b) => b.id === id)!;
 
@@ -607,25 +935,10 @@ export const ReceiptReel: React.FC<ReceiptReelProps> = ({ script }) => {
     altBeats[altBeats.length - 1].frames;
   const cta = byId("cta");
 
-  // CTA pulse while held — gentle, 1.4s period, ±3%.
-  const ctaPulse = 1 + 0.03 * Math.sin(frame * 0.14);
-
   return (
     <AbsoluteFill style={{ backgroundColor: BG, fontFamily: FONT }}>
       {/* animated endless-runner background, whole reel */}
       <RunnerBackground />
-
-      {/* top accent bar */}
-      <div
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          height: 12,
-          backgroundColor: AMBER,
-        }}
-      />
 
       {/* ---- HOOK (0–3s) ---- */}
       <Sequence from={hook.startFrame} durationInFrames={hook.frames}>
@@ -634,13 +947,13 @@ export const ReceiptReel: React.FC<ReceiptReelProps> = ({ script }) => {
           style={{
             justifyContent: "center",
             alignItems: "center",
-            padding: 70,
+            padding: 72,
           }}
         >
           <div
             style={{
               fontSize: 108,
-              fontWeight: 900,
+              fontWeight: 600,
               lineHeight: 1.12,
               color: WHITE,
               textAlign: "center",
@@ -659,14 +972,14 @@ export const ReceiptReel: React.FC<ReceiptReelProps> = ({ script }) => {
         <div
           style={{
             position: "absolute",
-            top: 110,
+            top: 112,
             left: 0,
             right: 0,
             display: "flex",
             justifyContent: "center",
           }}
         >
-          {sceneLabel("THE BILL")}
+          {sceneLabel("The bill")}
         </div>
         {receiptBeats.map((beat, i) => {
           const isTotal = beat.kind === "total";
@@ -681,45 +994,43 @@ export const ReceiptReel: React.FC<ReceiptReelProps> = ({ script }) => {
               <div
                 style={{
                   position: "absolute",
-                  top: isTotal ? 1180 : 330 + i * 150,
-                  left: 70,
-                  right: 70,
+                  top: isTotal ? 1120 : 400 + i * 148,
+                  left: 72,
+                  right: 72,
                 }}
               >
-                <Line
-                  kind={isTotal ? "slam" : "slide"}
-                  style={
-                    isTotal
-                      ? {
-                          fontSize: 118,
-                          fontWeight: 900,
-                          color: AMBER,
-                          textAlign: "center",
-                        }
-                      : {
-                          backgroundColor: PANEL,
-                          borderRadius: 20,
-                          padding: "34px 40px",
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                          fontSize: 62,
-                          fontWeight: 800,
-                          color: WHITE,
-                        }
-                  }
-                >
-                  {right ? (
-                    <>
-                      <span>{left}</span>
-                      <span style={{ color: CORAL, whiteSpace: "nowrap" }}>
-                        {right}
-                      </span>
-                    </>
-                  ) : (
-                    renderMoney(beat.text)
-                  )}
-                </Line>
+                {isTotal ? (
+                  <TotalLine text={beat.text} />
+                ) : (
+                  <Line
+                    kind="slide"
+                    enterAt={(i % 3) * 2}
+                    style={{
+                      backgroundColor: PANEL,
+                      border: `1px solid ${PANEL_LINE}`,
+                      borderRadius: 16,
+                      padding: "32px 40px",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      fontSize: 62,
+                      fontWeight: 600,
+                      color: WHITE,
+                      fontVariantNumeric: "tabular-nums",
+                    }}
+                  >
+                    {right ? (
+                      <>
+                        <span>{left}</span>
+                        <span style={{ color: WHITE, whiteSpace: "nowrap" }}>
+                          {right}
+                        </span>
+                      </>
+                    ) : (
+                      renderMoney(beat.text)
+                    )}
+                  </Line>
+                )}
               </div>
             </Sequence>
           );
@@ -734,7 +1045,7 @@ export const ReceiptReel: React.FC<ReceiptReelProps> = ({ script }) => {
         <div
           style={{
             position: "absolute",
-            top: 110,
+            top: 112,
             left: 0,
             right: 0,
             display: "flex",
@@ -745,12 +1056,12 @@ export const ReceiptReel: React.FC<ReceiptReelProps> = ({ script }) => {
             style={{
               fontFamily: FONT,
               fontSize: 52,
-              fontWeight: 900,
-              letterSpacing: 6,
-              color: AMBER,
+              fontWeight: 600,
+              letterSpacing: 0,
+              color: WHITE,
             }}
           >
-            CLIPFORGE
+            ClipForge
           </div>
         </div>
         {altBeats.map((beat, i) => (
@@ -763,21 +1074,24 @@ export const ReceiptReel: React.FC<ReceiptReelProps> = ({ script }) => {
             <div
               style={{
                 position: "absolute",
-                top: 430 + i * 210,
-                left: 70,
-                right: 70,
+                top: 480 + i * 208,
+                left: 72,
+                right: 72,
               }}
             >
               <Line
+                enterAt={i * 2}
                 style={{
-                  fontSize: 60,
-                  fontWeight: 800,
+                  display: "flex",
+                  alignItems: "flex-start",
+                  fontSize: 56,
+                  fontWeight: 600,
                   lineHeight: 1.25,
                   color: WHITE,
                 }}
               >
-                <span style={{ color: AMBER }}>✓ </span>
-                {renderMoney(beat.text)}
+                <Check />
+                <span>{renderMoney(beat.text)}</span>
               </Line>
             </div>
           </Sequence>
@@ -791,14 +1105,14 @@ export const ReceiptReel: React.FC<ReceiptReelProps> = ({ script }) => {
           style={{
             justifyContent: "center",
             alignItems: "center",
-            padding: 70,
+            padding: 72,
           }}
         >
-          <div style={{ transform: `scale(${ctaPulse})` }}>
+          <div>
             <Line
               style={{
                 fontSize: 64,
-                fontWeight: 800,
+                fontWeight: 600,
                 color: WHITE,
                 textAlign: "center",
               }}
@@ -807,9 +1121,10 @@ export const ReceiptReel: React.FC<ReceiptReelProps> = ({ script }) => {
             </Line>
             <Line
               enterAt={8}
+              kind="slam"
               style={{
                 fontSize: 132,
-                fontWeight: 900,
+                fontWeight: 600,
                 color: AMBER,
                 textAlign: "center",
                 lineHeight: 1.1,
@@ -822,10 +1137,10 @@ export const ReceiptReel: React.FC<ReceiptReelProps> = ({ script }) => {
                 enterAt={16}
                 style={{
                   fontSize: 58,
-                  fontWeight: 700,
+                  fontWeight: 600,
                   color: WHITE,
                   textAlign: "center",
-                  marginTop: 30,
+                  marginTop: 32,
                 }}
               >
                 {cta.subtext}
