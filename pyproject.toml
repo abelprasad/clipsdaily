@@ -28,6 +28,7 @@ dependencies = [
     "pyyaml",
     "fastapi>=0.115",  # ClipForge dashboard (dashboard.py)
     "uvicorn>=0.30",  # ClipForge dashboard server
+    "python-multipart>=0.0.18",  # dashboard form parsing (request.form())
     "requests",
     "playwright",
     "gtts",
