@@ -83,8 +83,9 @@ They never show internals:
 - No source code on screen, ever.
 - No file paths, no terminal output, no config contents.
 - No queue internals, no cutter logic, no ranking/spike logic.
-- No architecture diagrams of how the pipeline works.
+- Architecture diagrams are allowed ONLY at outcome level: named stages (Watcher, Cutter, Ranker, Poster) with no code, paths, config, thresholds, weights, or ranking logic. Anything showing how the cutter or ranker works stays out.
 
+Amended Nov 17, 2026 (Abel approved): outcome-level architecture is allowed; the no-internals rule still stands for everything else.
 The Remotion project itself stays **private**: local git repo, no remote,
 no push, no public repo. The `voices/` model and `public/voiceover/` WAVs
 are gitignored. If a future variant wants an outcome shot (dashboard,
