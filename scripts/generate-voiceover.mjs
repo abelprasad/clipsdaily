@@ -1,11 +1,13 @@
 // Generates the AI voiceover for the Receipt Reel from src/script.json.
-// Free, local, offline: Piper TTS (piper-tts, pip) with the en_US-lessac-medium
-// voice model in voices/. No paid service, no recordings.
+// Free, local, offline: Kokoro TTS (Kokoro-82M, MIT) with the af_heart
+// voice (Abel's pick), run in .venv-kokoro. No paid service, no recordings.
 //
 // What it does:
-//  1. Reads every beat's `voice` line from src/script.json
-//  2. Renders one WAV per beat into public/voiceover/<beat-id>.wav
-//  3. Measures each WAV with ffprobe and writes per-beat seconds into
+//  1. Calls scripts/generate-kokoro-voiceover.py, which renders one WAV
+//     per beat into public/voiceover/<beat-id>.wav and loudness-normalizes
+//     each to script.json's voice.targetMeanDb (v1's Piper level, -17 dB),
+//     capped so the peak never exceeds -1.0 dB.
+//  2. Measures each WAV with ffprobe and writes per-beat seconds into
 //     script.json under `timings` (beat length = max(minSeconds,
 //     audioSeconds + 0.5s tail)). The composition reads `timings` to size
 //     each beat, so narration and visuals stay in sync.
@@ -13,9 +15,9 @@
 // Usage:
 //   npm run voiceover
 // Re-run after editing any `voice` line in src/script.json, or after
-// changing the voice model in script.json's `voice` block.
+// changing the voice in script.json's `voice` block.
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -23,39 +25,17 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const scriptPath = join(root, "src", "script.json");
 const script = JSON.parse(readFileSync(scriptPath, "utf-8"));
 
-const piper = "/home/abel/.local/bin/piper";
-const model = join(root, script.voice.modelPath);
-const config = `${model}.json`;
-const outDir = join(root, "public", "voiceover");
-mkdirSync(outDir, { recursive: true });
+const venvPython = join(root, ".venv-kokoro", "bin", "python");
+const generator = join(root, "scripts", "generate-kokoro-voiceover.py");
 
-if (!existsSync(model) || !existsSync(config)) {
-  console.error(`Voice model missing: ${model}`);
-  console.error(
-    "Download it from https://huggingface.co/rhasspy/piper-voices " +
-      "(en/en_US/lessac/medium/en_US-lessac-medium.onnx + .onnx.json) into voices/",
-  );
-  process.exit(1);
-}
+console.log(
+  `Generating voiceover with Kokoro (${script.voice.model}, speed ${script.voice.speed ?? 0.95})...`,
+);
+execFileSync(venvPython, [generator], { stdio: "inherit" });
 
 const timings = {};
 for (const beat of script.beats) {
-  const out = join(outDir, `${beat.id}.wav`);
-  console.log(`[${beat.id}] ${beat.voice}`);
-  execFileSync(
-    piper,
-    [
-      "--model",
-      model,
-      "--config",
-      config,
-      "--length-scale",
-      String(script.voice.lengthScale ?? 1.0),
-      "--output_file",
-      out,
-    ],
-    { input: beat.voice, stdio: ["pipe", "ignore", "inherit"] },
-  );
+  const out = join(root, "public", "voiceover", `${beat.id}.wav`);
   const dur = parseFloat(
     execFileSync(
       "ffprobe",
@@ -73,7 +53,7 @@ for (const beat of script.beats) {
   );
   const seconds = Math.max(beat.minSeconds, dur + 0.5);
   timings[beat.id] = Number(seconds.toFixed(2));
-  console.log(`  -> ${dur.toFixed(2)}s audio, beat ${seconds.toFixed(2)}s`);
+  console.log(`[${beat.id}] ${dur.toFixed(2)}s audio, beat ${seconds.toFixed(2)}s`);
 }
 
 script.timings = timings;

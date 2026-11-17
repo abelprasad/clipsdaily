@@ -11,28 +11,28 @@
       "id": "r1",
       "kind": "receipt",
       "minSeconds": 3,
-      "text": "OpusClip Pro — $29/mo",
+      "text": "OpusClip Pro \u2014 $29/mo",
       "voice": "OpusClip Pro: twenty-nine dollars a month."
     },
     {
       "id": "r2",
       "kind": "receipt",
       "minSeconds": 3,
-      "text": "Claude Pro — $20/mo",
+      "text": "Claude Pro \u2014 $20/mo",
       "voice": "Claude Pro: twenty dollars a month."
     },
     {
       "id": "r3",
       "kind": "receipt",
       "minSeconds": 3.2,
-      "text": "300 credits = 5 hours of video",
+      "text": "300 credits = 5 hours",
       "voice": "Three hundred credits equals five hours of video."
     },
     {
       "id": "r4",
       "kind": "receipt",
       "minSeconds": 3.4,
-      "text": "Stream 2.5 hrs/day → gone in 2 days",
+      "text": "2.5h/day = gone in 2 days",
       "voice": "Stream two and a half hours a day, and it's gone in two days."
     },
     {
@@ -46,7 +46,7 @@
       "id": "a1",
       "kind": "alternative",
       "minSeconds": 3.2,
-      "text": "ClipForge clips LIVE — Opus and Vizard don't",
+      "text": "ClipForge clips LIVE \u2014 Opus and Vizard don't",
       "voice": "ClipForge clips live. Opus and Vizard don't."
     },
     {
@@ -67,7 +67,7 @@
       "id": "a4",
       "kind": "alternative",
       "minSeconds": 3.4,
-      "text": "$199 one-time kit or $19–29/mo — you own it",
+      "text": "$199 kit or $19-29/mo \u2014 you own it",
       "voice": "One ninety-nine one-time, or nineteen to twenty-nine a month. And you own it."
     },
     {
@@ -82,24 +82,24 @@
   "fps": 30,
   "height": 1920,
   "timings": {
-    "hook": 4.17,
-    "r1": 3.43,
-    "r2": 3,
-    "r3": 3.24,
-    "r4": 3.98,
-    "r5": 3,
-    "a1": 3.23,
-    "a2": 3,
-    "a3": 3.89,
-    "a4": 4.88,
+    "hook": 5.2,
+    "r1": 3.75,
+    "r2": 3.15,
+    "r3": 4.22,
+    "r4": 4.45,
+    "r5": 3.2,
+    "a1": 4.13,
+    "a2": 3.3,
+    "a3": 4.38,
+    "a4": 5.67,
     "cta": 5
   },
-  "title": "Receipt Reel v1 — Stop paying $49/mo",
+  "title": "Receipt Reel v2 \u2014 Stop paying $49/mo (Kokoro af_heart)",
   "voice": {
-    "engine": "Piper (free, local, offline)",
-    "lengthScale": 1,
-    "model": "en_US-lessac-medium",
-    "modelPath": "voices/en_US-lessac-medium.onnx"
+    "engine": "Kokoro (free, local, offline)",
+    "model": "af_heart",
+    "speed": 0.95,
+    "targetMeanDb": -17
   },
   "width": 1080
 }

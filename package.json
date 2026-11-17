@@ -29,7 +29,7 @@
     "upgrade": "remotion upgrade",
     "lint": "eslint src && tsc",
     "voiceover": "node scripts/generate-voiceover.mjs",
-    "render": "remotion render ReceiptReel out/receipt-reel-v1.mp4 --props=./src/script.json --license-key=free-license",
+    "render": "remotion render ReceiptReel out/receipt-reel-v2.mp4 --props=./src/script.json --license-key=free-license",
     "frames": "remotion render ReceiptReel out/frames --props=./src/script.json --license-key=free-license --frames=60,300,660,1020 --image-format=png"
   },
   "allowScripts": {

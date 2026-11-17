@@ -9,23 +9,22 @@ numbers — OpusClip Pro is **$29/mo**, not $19.
   the voiceover — see below)
 - Free only: Remotion is free for teams of 3 or fewer, system fonts only,
   no paid assets, no paid voice. Renders on indra with local tooling.
-- Voiceover: AI voice, never Abel's voice. Piper TTS (free, local, offline),
-  voice `en_US-lessac-medium`. Model file lives in `voices/` (gitignored,
-  ~63 MB — download it, don't commit it):
-  `https://huggingface.co/rhasspy/piper-voices` →
-  `en/en_US/lessac/medium/en_US-lessac-medium.onnx` (+ `.onnx.json`).
+- Voiceover: AI voice, never Abel's voice. Kokoro TTS (Kokoro-82M, MIT,
+  free, local, offline), voice `af_heart` at speed 0.95,
+  loudness-normalized to -17 dB mean. Runs in `.venv-kokoro/`
+  (installed once, see Voiceover section).
 
 ## Render the current ad
 
 ```bash
 npm run voiceover   # regenerate narration WAVs + timings (after any script edit)
-npm run render      # -> out/receipt-reel-v1.mp4
+npm run render      # -> out/receipt-reel-v2.mp4
 ```
 
 Or directly:
 
 ```bash
-npx remotion render ReceiptReel out/receipt-reel-v1.mp4 --props=./src/script.json --license-key=free-license
+npx remotion render ReceiptReel out/receipt-reel-v2.mp4 --props=./src/script.json --license-key=free-license
 ```
 
 ## Make a variant — edit ONE file
@@ -57,10 +56,12 @@ and beats fall back to `minSeconds` with no audio.)
 
 ## Voiceover
 
-- Engine: Piper (`pip install --user piper-tts`), model
-  `en_US-lessac-medium`, `lengthScale` 1.0 (in `script.json` under `voice`).
-  Swap the voice by changing `voice.model` / `voice.modelPath` and
-  re-running `npm run voiceover`.
+- Engine: Kokoro (`.venv-kokoro/`, `kokoro` + `misaki[en]` + spaCy
+  `en_core_web_sm`, `espeak-ng` for phonemization), voice `af_heart`,
+  `speed` 0.95, `targetMeanDb` -17 (in `script.json` under `voice`).
+  Swap the voice by changing `voice.model` and re-running
+  `npm run voiceover`. Samples of other voices live in
+  `out/voice-samples/`.
 - WAVs land in `public/voiceover/<beat-id>.wav` and are mixed in by the
   composition — no manual audio step.
 - To add a voiceover file by hand instead: drop a WAV at
@@ -92,7 +93,7 @@ Ads need them — most viewers watch muted. This is the explicit exception
 to the clipsdaily clips rule of no burned-in captions; that rule covers
 clips, not ads.
 
-## Layout beats (v1)
+## Layout beats (v2)
 
 | Beat | Time | Content |
 | --- | --- | --- |
@@ -101,7 +102,7 @@ clips, not ads.
 | Alternative | ~21–~34s | ClipForge pitch lines (live, no credits, auto-post, price) |
 | CTA | ~34s–end | "Comment CLIPFORGE — I'll DM you the link", held |
 
-Prices in v1 (verified Nov 16, 2026): OpusClip Pro $29/mo (300 credits),
+Prices in v2 (verified Nov 16, 2026): OpusClip Pro $29/mo (300 credits),
 Claude Pro $20/mo, 300 credits = 5 hours of video. Re-check vendor pricing
 pages before rendering a new variant.
 
@@ -110,7 +111,10 @@ pages before rendering a new variant.
 - `src/script.json` — the ad. Edit this for variants.
 - `src/ReceiptReel.tsx` — the composition (layout, beats, captions).
 - `src/Composition.tsx` — registers `ReceiptReel` (1080×1920, 30 fps).
-- `scripts/generate-voiceover.mjs` — Piper narration + timing measurement.
+- `scripts/generate-voiceover.mjs` — Kokoro narration + timing measurement.
+- `scripts/generate-kokoro-voiceover.py` — per-beat Kokoro synthesis +
+  loudness normalization (called by the .mjs).
 - `public/voiceover/` — generated narration WAVs (gitignored).
-- `voices/` — Piper voice model (gitignored, download only).
+- `voices/` — alternate Piper voice models (gitignored, download only;
+  v2 uses Kokoro, kept for voice comparisons).
 - `out/` — renders (gitignored).
