@@ -291,3 +291,9 @@ Run daily: `clipsdaily earnings --update && clipsdaily earnings --summary`.
   next start Nov 16 10:45); a watchdog is still unbuilt. Staging takes
   effect on the next runner restart (config is read once at startup).
 - Full write-up: `KICK.md`. Tests: `test_live_staging.py` 4/4.
+
+## Nov 16, 2026 — live status note
+
+> **Repo note (Nov 16, 2026):** the live code on indra (`/home/abel/clipsdaily/`) matches this branch. The live `queue_seed.py` and `queue_seed_famous.py` differ from the repo in one way: the live files use top-level imports (`import streamlink`, `from clips_api import ...`) and call `load_config()` on each run, and the live `queue_seed.py` has a `kick_stage()` helper that fetches the latest Kick VOD from `vod/` (the repo's `src/clipsdaily/queue_seed.py` has both). The live `README.md` in `/home/abel/clipsdaily/` carries a different top section (quick-start for the live dir) than the repo README; everything else is the same.
+
+This note was preserved verbatim from the live dir during the Nov 17, 2026 shutdown. The famous-clips source it references is ADR 016; the restart guide is `docs/RESTART.md`.
