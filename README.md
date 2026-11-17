@@ -2,7 +2,7 @@
 
 ![clipsdaily logo](assets/clipsdaily-logo.jpg)
 
-**59 pipeline modules · 7 CLI commands · 7 slash commands · 3 platforms · 2 clips/hour · 15 ADRs**
+**77 pipeline modules · 7 CLI commands · 7 slash commands · 3 platforms · 2 clips/hour · 19 ADRs**
 
 **Built by [Abel Prasad](https://www.linkedin.com/in/abel-prasad)** · [abelprasad.dev](https://abelprasad.dev)
 
@@ -20,6 +20,11 @@ watchlist, any game, any event.
 It also joins and submits clipping campaigns (Content Rewards)
 behind a strict eligibility gate, because one bad submission
 bans the account from every campaign permanently.
+
+> **This project is shut down as of Nov 17, 2026.** Abel killed it —
+> see [`docs/RESTART.md`](docs/RESTART.md) for the shutdown state and
+> how to bring it back. The repo is public (Abel's call) and stays
+> under the ClipForge Proprietary License: read it, don't resell it.
 
 > **This repo is the canonical dev copy** (decided Nov 15, 2026).
 > All future clipsdaily work happens here. The live pipeline
@@ -492,19 +497,22 @@ This repo was built by Muse (Friday) and some pieces only work
 in that setup. A Claude Code (or any other agent) user must
 replace them:
 
-### 1. Instagram posting runs on the Muse VM, not indra
+### 1. Instagram posting moved to indra (Nov 17, 2026) — then shut down
 
-`scripts/ig-post-staged.sh` posts Reels with `instagram-cli`,
-which needs glibc 2.39 and a local privsep socket that only
-exists on the Muse VM — it cannot run on indra. The script also
-reaches indra through an SSH tail-proxy helper
-(`ssh-tail-proxy.py`, HTTP CONNECT tunnel on port 3130) plus a
-Tailscale address. A Claude Code user must run the IG poster on
-their own operator machine with their own SSH route to the
-pipeline host, or fix the in-repo instagrapi route
-(`auth_instagram.py` currently fails at login with a
-`password_publickeys` error before 2FA — the live route is
-`instagram-cli` via the Meta Accounts Center link, no password).
+The VM route (`scripts/ig-post-staged.sh` with `instagram-cli`,
+glibc 2.39 + a local privsep socket that only exists on the Muse
+VM) stalled: every run asked for a one-time runtime approval and
+overnight requests timed out while Abel slept, so nothing posted
+for hours. The fix was `permissions.preapprove` (it refuses:
+`not_preapprovable` for this method). **The IG poster moved to
+indra Nov 17, 2026 — see `docs/AUTH.md` and `docs/RESTART.md`:**
+a venv (`.venv-ig`, Python 3.13.18, `instagrapi==3.2.15`) with
+`ig_post_staged.py`, a oneshot systemd service, and a timer
+(`*:05,35`). Session-cookie import via `auth_ig_session.py`;
+password login was never tested end to end. **Shutdown note: on
+the same day Instagram flagged `@clippedaily31` for unoriginal
+content (recommendations to non-followers off). Plain reposts must
+not resume — see `docs/RESTART.md` for what counts as original.**
 
 ### 2. The operator crons assume Muse's scheduler
 
@@ -540,8 +548,8 @@ listed lines. Do not refactor working code just for this.
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| TikTok post: upload OK, Post clicked, no confirmation in 120s, video never appears | Automation session throttled by TikTok (not expired cookies — check `docs/TIKTOK.md`) | Stop retrying. Wait it out, or re-export cookies from the operator's browser and test once. A manual phone post working proves the account is fine. |
-| TikTok post fails with `Playwright Sync API inside the asyncio loop` | Code bug in the hourly poster (sync `TikTokUploader` inside an asyncio loop) | Open bug, not fixed yet. Likely fix: call the TikTok post from a subprocess, or switch to the async Playwright API. |
+| TikTok post: upload OK, Post clicked, no confirmation in 120s, video never appears | Automation session throttled by TikTok (not expired cookies — check `docs/TIKTOK.md`) | Stop retrying. Wait it out, or re-export cookies from the operator's browser and test once. A manual phone post working proves the account is fine. **Shutdown note (Nov 17, 2026): TikTok auto-posting is blocked account-wide since Nov 15.** |
+| TikTok post fails with `Playwright Sync API inside the asyncio loop` | Code bug in the hourly poster (sync `TikTokUploader` inside an asyncio loop) | Fixed Nov 16, 2026: the TikTok post now runs in a subprocess (`post_tiktok_fixed.py`). **Shutdown note (Nov 17, 2026): TikTok auto-posting is blocked account-wide since Nov 15 — the fix is untested against a blocked account.** |
 | YouTube upload fails with `uploadLimitExceeded` | YouTube daily upload limit | Wait for the reset (~03:00 EST). Staged clips post the next day. |
 | YouTube delete fails with 403 insufficient scopes | Token has only `youtube.upload` + `youtube.readonly` | Re-run OAuth with the full `youtube` scope, or delete from YouTube Studio by hand. |
 | Instagram Reel never posts | `ig-post-staged.sh` only picks entries with status `staged` and `ig_slot` within the last 60 min | Check `ig-outbox/<clip-id>/meta.json` status and `ig_slot`. The hourly poster re-stages on retry; a stale stage is skipped, not re-posted. |
@@ -556,13 +564,14 @@ listed lines. Do not refactor working code just for this.
 
 | Path | What it is |
 |---|---|
-| `*.py` (repo root) | Pipeline code, flat copy of the live dir. Core: `runner.py`, `recorder.py`, `chat.py`, `cutter.py`, `poster.py`, `cleanup.py`, `vod.py`, `queue_seed.py`, `hourly_poster.py`, `campaign_watcher.py`, `campaigns.py`, `campaign_cut.py`, `eligibility_gate.py`, `auto_submit.py`, `earnings.py`, `auth_*.py`, `post_tiktok_fixed.py`. `patch_*.py`, `post_*.py`, `tt_*.py`, `recut_*.py` are historical one-offs, already applied — do not re-run blindly. `restart_maintainer.py` is stale and destructive (wipes `queue.json`) — **never run it**. |
+| `*.py` (repo root) | Pipeline code, flat copy of the live dir. Core: `runner.py`, `recorder.py`, `chat.py`, `cutter.py`, `poster.py`, `cleanup.py`, `vod.py`, `queue_seed.py`, `hourly_poster.py`, `campaign_watcher.py`, `campaigns.py`, `campaign_cut.py`, `eligibility_gate.py`, `auto_submit.py`, `earnings.py`, `auth_*.py`, `post_tiktok_fixed.py`, `ig_post_staged.py`. `patch_*.py`, `post_*.py`, `tt_*.py`, `recut_*.py` are historical one-offs, already applied — do not re-run blindly. `restart_maintainer.py` is stale and destructive (wipes `queue.json`) — **never run it**. |
 | `deploy.sh` | Deploys this repo to the live dir: backup, copy `.py`, restart tmux. `--dry-run` prints the plan and changes nothing. |
 | `config/` | `config.yaml.example`, `campaigns.example.json` (templates; copy to `config.yaml` / `campaigns.json`) |
 | `scripts/` | Operator-machine helpers: `ig-post-staged.sh` (Instagram cron), `submit_cron.sh`, `submit_mark.sh` |
-| `docs/` | `adr/` (architecture decision log, `adr/README.md` is the index), `AUTOMATION.md`, `CAPTIONS.md`, `campaigns.md`, `TIKTOK.md`, `AUTH.md`, `operations.md`, `PATHS.md`, `SUBMIT_CRON_BODY.md`, `earnings_dump_spec.md`, `youtube-vod-notes.md` |
+| `docs/` | `RESTART.md` (restart-from-scratch guide + shutdown state), `adr/` (architecture decision log, `adr/README.md` is the index), `AUTOMATION.md`, `CAPTIONS.md`, `campaigns.md`, `TIKTOK.md`, `AUTH.md`, `operations.md`, `PATHS.md`, `SUBMIT_CRON_BODY.md`, `earnings_dump_spec.md`, `youtube-vod-notes.md` |
 | `skills/` | `motion-design/` (vendored, MIT) + install notes for `ffmpeg-skill` and `video-editing` |
 | `assets/` | `clipsdaily-logo.jpg` (brand logo) |
+| `clipforge-ads/` | ClipForge ads (Remotion) — merged in as a subtree, history preserved. Own README + ADRs under `clipforge-ads/docs/adr/`. |
 
 ## Path assumptions
 
