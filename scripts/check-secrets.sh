@@ -30,8 +30,13 @@ scan() {
     fi
 }
 
+# A bare function call on the right-hand side is NOT a value:
+# access_token = _get_access_token() must not match. The value
+# alternative therefore requires a quoted literal, or a bare
+# token whose next character is not part of the token (the
+# negated class blocks backtracking into a call like foo()).
 scan "assignment-style secret with a value" \
-    '(api_key|apikey|password|passwd|secret|client_secret|access_token|refresh_token|private_key)[[:space:]]*[:=][[:space:]]*["'"'"']?[A-Za-z0-9_\-\./]{16,}'
+    '(api_key|apikey|password|passwd|secret|client_secret|access_token|refresh_token|private_key)[[:space:]]*[:=][[:space:]]*(["'"'"'][A-Za-z0-9_\-\./]{16,}["'"'"']|[A-Za-z0-9_\-\./]{16,}($|[^A-Za-z0-9_\-\./()]))'
 
 scan "token format (ya29./ghp_/github_pat_/sk-/xox-/private key)" \
     'ya29\.[A-Za-z0-9_\-]+|ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|sk-[A-Za-z0-9]{20,}|xox[baprs]-[A-Za-z0-9\-]{10,}|-----BEGIN [A-Z ]*PRIVATE KEY-----'
