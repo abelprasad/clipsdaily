@@ -14,7 +14,7 @@ import { Audio } from "@remotion/media";
 // ---------------------------------------------------------------------------
 // Types — the whole ad is driven by src/script.json (see README: variants).
 // ---------------------------------------------------------------------------
-export type BeatKind = "hook" | "receipt" | "total" | "alternative" | "cta";
+export type BeatKind = "hook" | "build" | "mechanism" | "result" | "cta";
 
 export type Beat = {
   id: string;
@@ -674,7 +674,7 @@ const RunnerBackground: React.FC = () => {
 // Kinetic text — one entrance pattern per scene, no linear moves left except
 // constant-velocity world scroll (the runner runs at constant speed).
 // - "fade": rise on a damped spring (slight overshoot), opacity eased out.
-// - "slide": receipt rows wind up and overshoot, then settle.
+// - "slide": build rows wind up and overshoot, then settle.
 // - "slam": the total / CTA wordmark scale down hard, squash on landing.
 // NOTE: useCurrentFrame() is relative to the NEAREST <Sequence>, so `enterAt`
 // is the offset inside this line's own Sequence (0 for lines whose Sequence
@@ -797,31 +797,185 @@ const HookWords: React.FC<{ text: string }> = ({ text }) => {
   );
 };
 
-// The total slams in and counts 0 → 49 on an eased curve, then squashes as
-// it settles. Same final text as the script: "Total: $49/mo".
-const TotalLine: React.FC<{ text: string }> = ({ text }) => {
+// v6 — HOOK: the cost bar. Two flat segments stack as the voice adds them
+// up: OpusClip Pro $29, then Claude Pro $20, then the $49/mo total counts
+// up on top. No gradients, no glow; amber only on the total.
+const CostChart: React.FC = () => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  const target = parseInt(text.match(/\$(\d+)/)?.[1] ?? "49", 10);
-  const s = spring({
-    frame,
-    fps,
-    config: { damping: 9, stiffness: 240, mass: 0.9 },
+  const OPUS_H = 284;
+  const CLAUDE_H = 196;
+  const BAR_TOP = 150;
+  const BAR_H = 480;
+  const BAR_BOTTOM = BAR_TOP + BAR_H;
+  const opusH = interpolate(frame, [6, 36], [0, OPUS_H], {
+    easing: EASE_OUT,
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  const claudeH = interpolate(frame, [30, 60], [0, CLAUDE_H], {
+    easing: EASE_OUT,
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
   });
   const count = Math.round(
-    interpolate(frame, [0, 24], [0, target], {
+    interpolate(frame, [56, 86], [0, 49], {
       easing: EASE_OUT,
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
     }),
   );
-  const base = 2.2 - 1.2 * s;
-  const settle = interpolate(s, [0.85, 1], [0, 1], {
+  const totalO = interpolate(frame, [52, 60], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
-  const bump = Math.sin(settle * Math.PI);
-  const opacity = interpolate(frame, [0, 5], [0, 1], {
+  const opusLabelO = interpolate(frame, [36, 44], [0, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  const claudeLabelO = interpolate(frame, [60, 68], [0, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  return (
+    <div
+      style={{ position: "relative", width: 1080, height: 720, marginTop: 48 }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          textAlign: "center",
+          fontSize: 104,
+          fontWeight: 600,
+          color: AMBER,
+          opacity: totalO,
+          fontVariantNumeric: "tabular-nums",
+        }}
+      >
+        ${count}/mo
+      </div>
+      {/* stacked bar: Opus $29 grows first, Claude $20 stacks on top */}
+      <div
+        style={{
+          position: "absolute",
+          left: 300,
+          top: BAR_TOP,
+          width: 230,
+          height: BAR_H,
+        }}
+      >
+        <div
+          style={{
+            position: "absolute",
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: opusH,
+            backgroundColor: AMBER,
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            left: 0,
+            right: 0,
+            bottom: opusH,
+            height: claudeH,
+            backgroundColor: "#546575",
+          }}
+        />
+      </div>
+      <div
+        style={{
+          position: "absolute",
+          left: 260,
+          right: 260,
+          top: BAR_BOTTOM,
+          height: 4,
+          backgroundColor: "#22303C",
+        }}
+      />
+      {/* segment labels, each fading in as its segment lands */}
+      <div
+        style={{
+          position: "absolute",
+          left: 580,
+          top: BAR_BOTTOM - OPUS_H / 2 - 48,
+          opacity: opusLabelO,
+        }}
+      >
+        <div
+          style={{
+            fontSize: 44,
+            fontWeight: 600,
+            color: WHITE,
+            lineHeight: 1.2,
+          }}
+        >
+          OpusClip Pro
+        </div>
+        <div
+          style={{
+            fontSize: 48,
+            fontWeight: 600,
+            color: WHITE,
+            fontVariantNumeric: "tabular-nums",
+          }}
+        >
+          $29/mo
+        </div>
+      </div>
+      <div
+        style={{
+          position: "absolute",
+          left: 580,
+          top: BAR_BOTTOM - OPUS_H - CLAUDE_H / 2 - 48,
+          opacity: claudeLabelO,
+        }}
+      >
+        <div
+          style={{
+            fontSize: 44,
+            fontWeight: 600,
+            color: WHITE,
+            lineHeight: 1.2,
+          }}
+        >
+          Claude Pro
+        </div>
+        <div
+          style={{
+            fontSize: 48,
+            fontWeight: 600,
+            color: WHITE,
+            fontVariantNumeric: "tabular-nums",
+          }}
+        >
+          $20/mo
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// v6 — MECHANISM: one timeline per side, same scale, same beat. ClipForge's
+// track fills while clip discs pop onto it live; the VOD side fills, hits
+// "Stream ends", and only then gets its clips. The lag is the point.
+const TimelinePanel: React.FC<{
+  top: number;
+  frames: number;
+  name: string;
+  badge: string;
+  badgeLive: boolean;
+  clipAt: number[];
+  streamEndsAt: number | null;
+  note: string;
+}> = ({ top, frames, name, badge, badgeLive, clipAt, streamEndsAt, note }) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const progress = interpolate(frame, [8, frames * 0.92], [0, 1], {
     easing: EASE_OUT,
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
@@ -829,16 +983,143 @@ const TotalLine: React.FC<{ text: string }> = ({ text }) => {
   return (
     <div
       style={{
-        opacity,
-        transform: `scale(${base * (1 + 0.05 * bump)}, ${base * (1 - 0.05 * bump)})`,
-        fontSize: 118,
-        fontWeight: 600,
-        color: AMBER,
-        textAlign: "center",
-        fontVariantNumeric: "tabular-nums",
+        position: "absolute",
+        top,
+        left: 72,
+        right: 72,
+        height: 380,
+        backgroundColor: PANEL,
+        border: `1px solid ${PANEL_LINE}`,
+        borderRadius: 16,
+        padding: "32px 40px",
       }}
     >
-      Total: ${count}/mo
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
+        <div style={{ fontSize: 54, fontWeight: 600, color: WHITE }}>
+          {name}
+        </div>
+        <div
+          style={{
+            backgroundColor: badgeLive ? AMBER : "#2A3642",
+            color: badgeLive ? BG : WHITE,
+            borderRadius: 999,
+            padding: "10px 24px",
+            fontSize: 36,
+            fontWeight: 600,
+          }}
+        >
+          {badge}
+        </div>
+      </div>
+      {/* track */}
+      <div
+        style={{
+          position: "relative",
+          marginTop: 72,
+          height: 20,
+          backgroundColor: LANE,
+          borderRadius: 10,
+        }}
+      >
+        <div
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 0,
+            bottom: 0,
+            width: `${progress * 100}%`,
+            backgroundColor: badgeLive ? AMBER : MUTED,
+            borderRadius: 10,
+          }}
+        />
+        {streamEndsAt !== null ? (
+          <>
+            <div
+              style={{
+                position: "absolute",
+                left: `${streamEndsAt * 100}%`,
+                top: -14,
+                width: 4,
+                height: 48,
+                backgroundColor: WHITE,
+              }}
+            />
+            <div
+              style={{
+                position: "absolute",
+                left: `${streamEndsAt * 100}%`,
+                top: -58,
+                transform: "translateX(-50%)",
+                fontSize: 32,
+                fontWeight: 600,
+                color: MUTED,
+                whiteSpace: "nowrap",
+              }}
+            >
+              Stream ends
+            </div>
+          </>
+        ) : null}
+        {clipAt.map((f) => {
+          const at = f * frames;
+          const local = frame - at;
+          const s = spring({
+            frame: local,
+            fps,
+            config: { damping: 10, stiffness: 280, mass: 0.7 },
+          });
+          const o = interpolate(local, [0, 6], [0, 1], {
+            extrapolateLeft: "clamp",
+            extrapolateRight: "clamp",
+          });
+          return (
+            <div
+              key={f}
+              style={{
+                position: "absolute",
+                left: `calc(${f * 100}% - 17px)`,
+                top: -8,
+                width: 34,
+                height: 34,
+                borderRadius: "50%",
+                backgroundColor: AMBER,
+                opacity: o,
+                transform: `scale(${Math.max(0, s)})`,
+              }}
+            >
+              <svg
+                width={13}
+                height={13}
+                viewBox="0 0 12 12"
+                style={{
+                  position: "absolute",
+                  left: "50%",
+                  top: "50%",
+                  transform: "translate(-42%, -50%)",
+                }}
+              >
+                <path d="M 2 1 L 11 6 L 2 11 Z" fill={WHITE} />
+              </svg>
+            </div>
+          );
+        })}
+      </div>
+      <div
+        style={{
+          marginTop: 72,
+          fontSize: 44,
+          fontWeight: 600,
+          color: WHITE,
+        }}
+      >
+        {note}
+      </div>
     </div>
   );
 };
@@ -901,19 +1182,7 @@ const CaptionBar: React.FC<{ plan: BeatPlan[] }> = ({ plan }) => {
   );
 };
 
-const sceneLabel = (text: string) => (
-  <div
-    style={{
-      fontFamily: FONT,
-      fontSize: 40,
-      fontWeight: 600,
-      letterSpacing: 2,
-      color: MUTED,
-    }}
-  >
-    {text}
-  </div>
-);
+
 
 export const ReceiptReel: React.FC<ReceiptReelProps> = ({ script }) => {
   const { fps } = useVideoConfig();
@@ -921,180 +1190,259 @@ export const ReceiptReel: React.FC<ReceiptReelProps> = ({ script }) => {
   const byId = (id: string) => plan.find((b) => b.id === id)!;
 
   const hook = byId("hook");
-  const receiptBeats = plan.filter(
-    (b) => b.kind === "receipt" || b.kind === "total",
-  );
-  const receiptSceneStart = receiptBeats[0].startFrame;
-  const receiptSceneEnd =
-    receiptBeats[receiptBeats.length - 1].startFrame +
-    receiptBeats[receiptBeats.length - 1].frames;
-  const altBeats = plan.filter((b) => b.kind === "alternative");
-  const altSceneStart = altBeats[0].startFrame;
-  const altSceneEnd =
-    altBeats[altBeats.length - 1].startFrame +
-    altBeats[altBeats.length - 1].frames;
+  const build = byId("build");
+  const mechanism = byId("mechanism");
+  const result = byId("result");
   const cta = byId("cta");
+
+  // v6 build beat — outcome-level stage names only. No code, no paths, no
+  // config, no queue or ranking internals on screen, ever.
+  const BUILD_PARTS = [
+    { name: "Watcher", desc: "watches your stream live" },
+    { name: "Cutter", desc: "cuts the best moments" },
+    { name: "Ranker", desc: "picks the winners" },
+    { name: "Poster", desc: "posts them live" },
+  ];
+  const RESULT_CHIPS = [
+    "Posts while live",
+    "24/7 automatic",
+    "$199 kit or $19–29/mo",
+  ];
 
   return (
     <AbsoluteFill style={{ backgroundColor: BG, fontFamily: FONT }}>
       {/* animated endless-runner background, whole reel */}
       <RunnerBackground />
 
-      {/* ---- HOOK (0–3s) ---- */}
+      {/* ---- HOOK: the burn, as a rising bar ---- */}
       <Sequence from={hook.startFrame} durationInFrames={hook.frames}>
         <Audio src={staticFile(`voiceover/${hook.id}.wav`)} />
         <AbsoluteFill
-          style={{
-            justifyContent: "center",
-            alignItems: "center",
-            padding: 72,
-          }}
+          style={{ alignItems: "center", paddingTop: 170 }}
         >
           <div
             style={{
-              fontSize: 108,
+              fontSize: 96,
               fontWeight: 600,
               lineHeight: 1.12,
               color: WHITE,
               textAlign: "center",
+              paddingLeft: 72,
+              paddingRight: 72,
             }}
           >
             <HookWords text={hook.text} />
           </div>
+          <CostChart />
         </AbsoluteFill>
       </Sequence>
 
-      {/* ---- RECEIPT (bill lines accumulate, then the total) ---- */}
-      <Sequence
-        from={receiptSceneStart}
-        durationInFrames={receiptSceneEnd - receiptSceneStart}
-      >
+      {/* ---- BUILD: one setup, four parts ---- */}
+      <Sequence from={build.startFrame} durationInFrames={build.frames}>
+        <Audio src={staticFile(`voiceover/${build.id}.wav`)} />
         <div
           style={{
             position: "absolute",
-            top: 112,
+            top: 190,
             left: 0,
             right: 0,
             display: "flex",
             justifyContent: "center",
           }}
         >
-          {sceneLabel("The bill")}
-        </div>
-        {receiptBeats.map((beat, i) => {
-          const isTotal = beat.kind === "total";
-          const [left, right] = beat.text.split(" — ");
-          return (
-            <Sequence
-              key={beat.id}
-              from={beat.startFrame - receiptSceneStart}
-              durationInFrames={receiptSceneEnd - beat.startFrame}
-            >
-              <Audio src={staticFile(`voiceover/${beat.id}.wav`)} />
-              <div
-                style={{
-                  position: "absolute",
-                  top: isTotal ? 1120 : 400 + i * 148,
-                  left: 72,
-                  right: 72,
-                }}
-              >
-                {isTotal ? (
-                  <TotalLine text={beat.text} />
-                ) : (
-                  <Line
-                    kind="slide"
-                    enterAt={(i % 3) * 2}
-                    style={{
-                      backgroundColor: PANEL,
-                      border: `1px solid ${PANEL_LINE}`,
-                      borderRadius: 16,
-                      padding: "32px 40px",
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      fontSize: 62,
-                      fontWeight: 600,
-                      color: WHITE,
-                      fontVariantNumeric: "tabular-nums",
-                    }}
-                  >
-                    {right ? (
-                      <>
-                        <span>{left}</span>
-                        <span style={{ color: WHITE, whiteSpace: "nowrap" }}>
-                          {right}
-                        </span>
-                      </>
-                    ) : (
-                      renderMoney(beat.text)
-                    )}
-                  </Line>
-                )}
-              </div>
-            </Sequence>
-          );
-        })}
-      </Sequence>
-
-      {/* ---- ALTERNATIVE (ClipForge pitch lines accumulate) ---- */}
-      <Sequence
-        from={altSceneStart}
-        durationInFrames={altSceneEnd - altSceneStart}
-      >
-        <div
-          style={{
-            position: "absolute",
-            top: 112,
-            left: 0,
-            right: 0,
-            display: "flex",
-            justifyContent: "center",
-          }}
-        >
-          <div
+          <Line
             style={{
-              fontFamily: FONT,
-              fontSize: 52,
+              fontSize: 76,
               fontWeight: 600,
-              letterSpacing: 0,
               color: WHITE,
+              textAlign: "center",
             }}
           >
-            ClipForge
-          </div>
+            {build.text}
+          </Line>
         </div>
-        {altBeats.map((beat, i) => (
-          <Sequence
-            key={beat.id}
-            from={beat.startFrame - altSceneStart}
-            durationInFrames={altSceneEnd - beat.startFrame}
+        {BUILD_PARTS.map((part, i) => (
+          <div
+            key={part.name}
+            style={{
+              position: "absolute",
+              top: 430 + i * 216,
+              left: 72,
+              right: 72,
+            }}
           >
-            <Audio src={staticFile(`voiceover/${beat.id}.wav`)} />
-            <div
+            <Line
+              kind="slide"
+              enterAt={Math.round(
+                build.frames * [0.06, 0.28, 0.5, 0.72][i],
+              )}
               style={{
-                position: "absolute",
-                top: 480 + i * 208,
-                left: 72,
-                right: 72,
+                backgroundColor: PANEL,
+                border: `1px solid ${PANEL_LINE}`,
+                borderRadius: 16,
+                padding: "28px 36px",
+                display: "flex",
+                alignItems: "center",
               }}
             >
-              <Line
-                enterAt={i * 2}
+              <div
                 style={{
-                  display: "flex",
-                  alignItems: "flex-start",
-                  fontSize: 56,
+                  width: 72,
+                  height: 72,
+                  borderRadius: "50%",
+                  backgroundColor: AMBER,
+                  color: BG,
+                  fontSize: 40,
                   fontWeight: 600,
-                  lineHeight: 1.25,
-                  color: WHITE,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  marginRight: 32,
+                  flexShrink: 0,
                 }}
               >
-                <Check />
-                <span>{renderMoney(beat.text)}</span>
-              </Line>
-            </div>
-          </Sequence>
+                {i + 1}
+              </div>
+              <div>
+                <div
+                  style={{
+                    fontSize: 56,
+                    fontWeight: 600,
+                    color: WHITE,
+                    lineHeight: 1.1,
+                  }}
+                >
+                  {part.name}
+                </div>
+                <div
+                  style={{
+                    fontSize: 38,
+                    fontWeight: 600,
+                    color: MUTED,
+                    lineHeight: 1.25,
+                  }}
+                >
+                  {part.desc}
+                </div>
+              </div>
+            </Line>
+          </div>
+        ))}
+      </Sequence>
+
+      {/* ---- MECHANISM: live beats the VOD ---- */}
+      <Sequence from={mechanism.startFrame} durationInFrames={mechanism.frames}>
+        <Audio src={staticFile(`voiceover/${mechanism.id}.wav`)} />
+        <div
+          style={{
+            position: "absolute",
+            top: 190,
+            left: 0,
+            right: 0,
+            display: "flex",
+            justifyContent: "center",
+          }}
+        >
+          <Line
+            style={{
+              fontSize: 76,
+              fontWeight: 600,
+              color: WHITE,
+              textAlign: "center",
+            }}
+          >
+            Live beats the VOD
+          </Line>
+        </div>
+        <TimelinePanel
+          top={440}
+          frames={mechanism.frames}
+          name="ClipForge"
+          badge="LIVE"
+          badgeLive
+          clipAt={[0.3, 0.55, 0.8]}
+          streamEndsAt={null}
+          note="Clips post while you're live"
+        />
+        <TimelinePanel
+          top={860}
+          frames={mechanism.frames}
+          name="Opus / Vizard"
+          badge="VOD only"
+          badgeLive={false}
+          clipAt={[0.88, 0.97]}
+          streamEndsAt={0.72}
+          note="Clips only after the VOD"
+        />
+      </Sequence>
+
+      {/* ---- RESULT: the honest number ---- */}
+      <Sequence from={result.startFrame} durationInFrames={result.frames}>
+        <Audio src={staticFile(`voiceover/${result.id}.wav`)} />
+        <div
+          style={{
+            position: "absolute",
+            top: 230,
+            left: 0,
+            right: 0,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+          }}
+        >
+          <Line
+            kind="slam"
+            style={{
+              fontSize: 300,
+              fontWeight: 600,
+              color: AMBER,
+              textAlign: "center",
+              lineHeight: 1,
+              fontVariantNumeric: "tabular-nums",
+            }}
+          >
+            $0
+          </Line>
+          <Line
+            enterAt={10}
+            style={{
+              fontSize: 64,
+              fontWeight: 600,
+              color: WHITE,
+              textAlign: "center",
+              marginTop: 16,
+            }}
+          >
+            credits burned
+          </Line>
+        </div>
+        {RESULT_CHIPS.map((chip, i) => (
+          <div
+            key={chip}
+            style={{
+              position: "absolute",
+              top: 980 + i * 190,
+              left: 72,
+              right: 72,
+            }}
+          >
+            <Line
+              enterAt={Math.round(
+                result.frames * [0.32, 0.52, 0.72][i],
+              )}
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                fontSize: 54,
+                fontWeight: 600,
+                lineHeight: 1.25,
+                color: WHITE,
+              }}
+            >
+              <Check />
+              <span>{renderMoney(chip)}</span>
+            </Line>
+          </div>
         ))}
       </Sequence>
 

@@ -3,72 +3,30 @@
     {
       "id": "hook",
       "kind": "hook",
-      "minSeconds": 3,
-      "text": "Stop paying $49/mo for clips that die in 2 days",
-      "voice": "Stop paying forty-nine dollars a month for clips that die in two days."
+      "minSeconds": 5,
+      "text": "Streamers burn $49/mo on clips",
+      "voice": "Streamers burn forty-nine dollars a month on OpusClip and Claude credits, before a single clip goes live. Twenty-nine plus twenty, every month."
     },
     {
-      "id": "r1",
-      "kind": "receipt",
-      "minSeconds": 2.5,
-      "text": "OpusClip Pro \u2014 $29/mo",
-      "voice": "OpusClip Pro: twenty-nine dollars a month."
+      "id": "build",
+      "kind": "build",
+      "minSeconds": 6,
+      "text": "One setup, four parts",
+      "voice": "One setup, four parts. The watcher watches your stream. The cutter cuts the best moments. The ranker picks the winners. The poster posts them live."
     },
     {
-      "id": "r2",
-      "kind": "receipt",
-      "minSeconds": 2,
-      "text": "Claude Pro \u2014 $20/mo",
-      "voice": "Claude Pro: twenty dollars a month."
+      "id": "mechanism",
+      "kind": "mechanism",
+      "minSeconds": 6,
+      "text": "Clips post while you're live",
+      "voice": "ClipForge cuts and posts while you're still live, riding the moment. Opus and Vizard wait for the VOD, after the moment's gone."
     },
     {
-      "id": "r3",
-      "kind": "receipt",
-      "minSeconds": 2.8,
-      "text": "300 credits = 5 hours",
-      "voice": "Three hundred credits equals five hours of video."
-    },
-    {
-      "id": "r4",
-      "kind": "receipt",
-      "minSeconds": 3,
-      "text": "2.5h/day = gone in 2 days",
-      "voice": "Stream two and a half hours a day, and it's gone in two days."
-    },
-    {
-      "id": "r5",
-      "kind": "total",
-      "minSeconds": 2,
-      "text": "Total: $49/mo",
-      "voice": "Total: forty-nine dollars a month."
-    },
-    {
-      "id": "a1",
-      "kind": "alternative",
-      "minSeconds": 2.8,
-      "text": "ClipForge clips LIVE \u2014 Opus and Vizard don't",
-      "voice": "ClipForge clips live. Opus and Vizard don't."
-    },
-    {
-      "id": "a2",
-      "kind": "alternative",
-      "minSeconds": 2,
-      "text": "No credits. No per-minute billing.",
-      "voice": "No credits. No per-minute billing."
-    },
-    {
-      "id": "a3",
-      "kind": "alternative",
-      "minSeconds": 3,
-      "text": "Auto-posts to IG, YouTube, TikTok",
-      "voice": "It auto-posts to Instagram, YouTube, and TikTok."
-    },
-    {
-      "id": "a4",
-      "kind": "alternative",
-      "minSeconds": 3.4,
-      "text": "$199 kit or $19-29/mo \u2014 you own it",
-      "voice": "One ninety-nine one-time, or nineteen to twenty-nine a month. And you own it."
+      "id": "result",
+      "kind": "result",
+      "minSeconds": 6,
+      "text": "$0 credits burned",
+      "voice": "Zero dollars in credits burned. Clips post while you're live, twenty-four seven, automatic. One ninety-nine one-time, or nineteen to twenty-nine a month."
     },
     {
       "id": "cta",
@@ -82,19 +40,13 @@
   "fps": 30,
   "height": 1920,
   "timings": {
-    "hook": 4.11,
-    "r1": 2.77,
-    "r2": 2.25,
-    "r3": 2.99,
-    "r4": 3.45,
-    "r5": 2.24,
-    "a1": 3.1,
-    "a2": 2.3,
-    "a3": 3.26,
-    "a4": 4.44,
+    "hook": 8.79,
+    "build": 8.83,
+    "mechanism": 7.78,
+    "result": 9.37,
     "cta": 3.31
   },
-  "title": "Receipt Reel v3 \u2014 Stop paying $49/mo (Kokoro af_heart, full reel animation)",
+  "title": "Explainer v6 — $49/mo burn, four parts, live not VOD (Kokoro af_heart)",
   "voice": {
     "engine": "Kokoro (free, local, offline)",
     "model": "af_heart",

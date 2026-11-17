@@ -1,7 +1,9 @@
 # ClipForge Ads — Receipt Reel template (Remotion)
 
-Reusable template for ClipForge promo reels in the receipt format:
+Reusable template for ClipForge promo reels. v1–v5 are the receipt format:
 **hook → on-screen bill math → cheaper alternative → comment-keyword CTA**.
+v6 is the animated-explainer format (Huzaifa reel structure):
+**hook number + rising bar → four-part build → live-vs-VOD mechanism → result screen → comment-keyword CTA**.
 Modeled on the @tech.happens ClipIt Studio reel (Dfz6w2PO6oy), with honest
 numbers — OpusClip Pro is **$29/mo**, not $19.
 
@@ -10,6 +12,7 @@ numbers — OpusClip Pro is **$29/mo**, not $19.
 - Free only: Remotion is free for teams of 3 or fewer, system fonts only,
   no paid assets, no paid voice. Renders on indra with local tooling.
 - **v3 animation (Nov 16, 2026):** full reel style — an endless-runner background drawn in code (parallax skylines, scrolling ground, runner silhouette, coins, speed lines, all behind a scrim so copy stays legible) plus kinetic text: hook words pop in one at a time with the $49 counting up 0 → 49, receipt rows slide in, the total slams in, the CTA pulses. No ripped footage, no copyrighted assets.
+- **v6 explainer (Nov 16, 2026):** full rebuild in the animated-explainer format — hook is a rising cost bar ($29 OpusClip + $20 Claude stacking to $49/mo), build is four named parts (watcher → cutter → ranker → poster, outcome-level names only, no code/paths/internals on screen), mechanism is two timelines (ClipForge posts while live, Opus/Vizard only after the VOD), result is $0 credits burned + 3 real metrics + price. 5 beats, 38.1s, Kokoro af_heart 1.1x, fastest beat 179 wpm (every beat ≤200).
 - **v5 pace (Nov 16, 2026):** same ad, faster — Kokoro speed 1.1, Kokoro leading/trailing silence trimmed (0.05s pads, sample-accurate; ffmpeg silenceremove was rejected: its stop side leaves no pad and clips final words), beat tail 0.4s, minSeconds floors lowered; 34.2s total, inter-beat gaps ~0.5s. No script, visual, or CTA change.
 - Voiceover: AI voice, never Abel's voice. Kokoro TTS (Kokoro-82M, MIT,
   free, local, offline), voice `af_heart` at speed 1.1,
@@ -20,13 +23,13 @@ numbers — OpusClip Pro is **$29/mo**, not $19.
 
 ```bash
 npm run voiceover   # regenerate narration WAVs + timings (after any script edit)
-npm run render      # -> out/receipt-reel-v3.mp4
+npm run render      # -> out/receipt-reel-v6.mp4
 ```
 
 Or directly:
 
 ```bash
-npx remotion render ReceiptReel out/receipt-reel-v3.mp4 --props=./src/script.json --license-key=free-license
+npx remotion render ReceiptReel out/receipt-reel-v6.mp4 --props=./src/script.json --license-key=free-license
 ```
 
 ## Make a variant — edit ONE file
@@ -103,6 +106,16 @@ clips, not ads.
 | Receipt | ~4–~21s | Bill lines appear one by one, then "Total: $49/mo" |
 | Alternative | ~21–~34s | ClipForge pitch lines (live, no credits, auto-post, price) |
 | CTA | ~34s–end | "Comment CLIPFORGE — I'll DM you the link", held |
+
+## Layout beats (v6)
+
+| Beat | Time | Content |
+| --- | --- | --- |
+| Hook | 0–~9s | Rising cost bar: OpusClip $29 + Claude $20 stack to $49/mo |
+| Build | ~9–~18s | "One setup, four parts": watcher → cutter → ranker → poster |
+| Mechanism | ~18–~25s | Two timelines: ClipForge posts while live, Opus/Vizard after the VOD |
+| Result | ~25–~35s | $0 credits burned + posts-while-live / 24/7 automatic / $199 or $19–29/mo |
+| CTA | ~35s–end | "Comment CLIPFORGE — I'll DM you the link", held |
 
 Prices in v2 (verified Nov 16, 2026): OpusClip Pro $29/mo (300 credits),
 Claude Pro $20/mo, 300 credits = 5 hours of video. Re-check vendor pricing
