@@ -66,6 +66,11 @@ Python-package rename is a follow-up after Abel confirms the name.
   recordings). Disk guard 50GB in runner. A customer box needs 500GB+ free
   recommended; installer warns below that and lowers default concurrency.
 - STOP kill switch: honored by runner + hourly_poster; NOT by queue_seed.
+- Daily-cap bug (found in audit, fixed on this branch): SharedState.clips_today
+  never reset, so the live runner silently stops cutting after 20 clips TOTAL
+  until a human restarts the process. Fixed: reset at local midnight.
+- Runner config reload (this branch): config.yaml re-read every 60s,
+  watch threads reconciled, effective config in logs/runner-state.json.
   Package: every service honors STOP.
 - Caps/limits enforced in code (keep): YT 8/day (slots 00/03/06/09/12/15/18/21),
   TikTok API ~15 Direct Posts/day + 5 drafts/24h, max 20 clips/day, 1 clip per

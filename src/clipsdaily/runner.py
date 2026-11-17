@@ -12,6 +12,15 @@ lost). Delete STOP to resume.
 Rate limits: max 1 clip per streamer per 5 min, max 20 clips/day total.
 The per-streamer cooldown is shared across platforms: xqc on Twitch
 and Kick is one streamer, so the same moment never makes two clips.
+The daily cap resets at local midnight (a thread that never resets
+would silently stop cutting after 20 clips until a human restarted it).
+
+Config reload (ClipForge package): config.yaml is re-read every 60s.
+Adding or removing a streamer takes effect without a restart — the
+runner spawns a watch thread for a new streamer and stops the thread
+for a removed one (after its current stream ends, so nothing in flight
+is lost). The effective config is written to logs/runner-state.json so
+the dashboard can show what is actually running.
 """
 import fcntl
 import json
@@ -22,6 +31,7 @@ from pathlib import Path
 
 import yaml
 
+from .branding import BRAND_NAME
 from .paths import runtime_home
 HERE = runtime_home()
 
@@ -36,6 +46,54 @@ from .recorder import is_live, record  # noqa: E402
 def load_config():
     with open(HERE / "config.yaml") as f:
         return yaml.safe_load(f)
+
+
+def load_config_file(path):
+    with open(path) as f:
+        return yaml.safe_load(f)
+
+
+class LiveConfig:
+    """Thread-safe holder for the current config.yaml contents.
+
+    Reloaded when the file's mtime changes. A bad reload (bad YAML,
+    unreadable file) keeps the last good config and logs a warning —
+    the runner never dies because of a config typo.
+    """
+
+    def __init__(self, path):
+        self.path = Path(path)
+        self._lock = threading.Lock()
+        self._config = load_config_file(self.path)
+        self._mtime = self._path_mtime()
+
+    def _path_mtime(self):
+        try:
+            return self.path.stat().st_mtime
+        except OSError:
+            return None
+
+    def get(self):
+        with self._lock:
+            return self._config
+
+    def mtime(self):
+        return self._mtime
+
+    def reload_if_changed(self):
+        mtime = self._path_mtime()
+        if mtime is None or mtime == self._mtime:
+            return False
+        try:
+            cfg = load_config_file(self.path)
+        except Exception as e:
+            print(f"[runner] config reload failed ({e}), "
+                  f"keeping old config", flush=True)
+            return False
+        with self._lock:
+            self._config = cfg
+            self._mtime = mtime
+        return True
 
 
 def normalize_streamers(raw):
@@ -149,18 +207,29 @@ def cleanup_old_recordings(hours):
 
 class SharedState:
     """Cooldown + daily cap shared across all watcher threads, keyed by
-    streamer name (platform-agnostic, so xqc Twitch + Kick dedupe)."""
+    streamer name (platform-agnostic, so xqc Twitch + Kick dedupe).
+
+    The daily counter resets at local midnight. Without the reset the
+    runner silently stops cutting after max_clips_per_day TOTAL clips
+    until a human restarts the process — a zero-intervention killer.
+    """
 
     def __init__(self, max_clips_per_day):
         self.lock = threading.Lock()
         self.last_clip = {}          # channel -> timestamp of last clip
         self.clips_today = 0
         self.max_clips_per_day = max_clips_per_day
+        self._day = time.strftime("%Y-%m-%d")
 
     def claim_clip(self, channel, cooldown_seconds):
         """True if this streamer may cut a clip now (cooldown passed and
         daily cap not hit); reserves the slot."""
         with self.lock:
+            today = time.strftime("%Y-%m-%d")
+            if today != self._day:
+                self._day = today
+                self.clips_today = 0
+                self.last_clip = {}
             now = time.time()
             if self.clips_today >= self.max_clips_per_day:
                 return False
@@ -171,12 +240,21 @@ class SharedState:
             return True
 
 
-def watch_streamer(platform, channel, entry, config, shared):
+def watch_streamer(platform, channel, entry, live_config, shared,
+                   stop_event):
     """One thread per (platform, channel): record while live, monitor
     chat, cut+post. Record-only platforms (no chat monitor) record
-    but cut nothing."""
+    but cut nothing.
+
+    Config is read through live_config each loop iteration, so a
+    reloaded config (caps, models, platform flags) applies to the next
+    stream without a restart. stop_event is set by main() when the
+    streamer is removed from config; the thread then exits after its
+    current stream ends — an in-flight recording/cut is never killed.
+    """
     tag = f"{platform}_{channel}"
-    while True:
+    while not stop_event.is_set():
+        config = live_config.get()
         # Disk guard: below 50 GB free, stop starting new recordings.
         # Finish/post what is queued, clean up, log a warning, retry.
         if not disk_ok():
@@ -184,10 +262,12 @@ def watch_streamer(platform, channel, entry, config, shared):
                   f"< {DISK_GUARD_GB} GB — not starting new recordings",
                   flush=True)
             run_cleanup(config, aggressive=True)
-            time.sleep(600)
+            if stop_event.wait(600):
+                break
             continue
         if not is_live(platform, channel):
-            time.sleep(60)
+            if stop_event.wait(60):
+                break
             continue
         stamp = time.strftime("%Y%m%d_%H%M%S")
         rec = HERE / "recordings" / f"{tag}_{stamp}.ts"
@@ -275,33 +355,102 @@ def watch_streamer(platform, channel, entry, config, shared):
         cleanup_old_recordings(config["recording_retention_hours"])
 
 
+def write_runner_state(live_config, shared, threads):
+    """Effective config + live threads, for the dashboard and for
+    debugging. Best-effort: never let a state write kill the runner.
+    """
+    try:
+        cfg = live_config.get()
+        entries = normalize_streamers(cfg.get("streamers", []))
+        state = {
+            "watchlist": ["%s/%s" % (p, c) for p, c, _ in entries],
+            "platforms": cfg.get("platforms", {}),
+            "tiktok_api": bool(cfg.get("tiktok_api", False)),
+            "max_clips_per_day": cfg.get("max_clips_per_day"),
+            "clips_today": shared.clips_today,
+            "config_loaded_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
+            "config_mtime": live_config.mtime(),
+            "threads": sorted("%s/%s" % k for k in threads),
+        }
+        logs_dir = HERE / "logs"
+        logs_dir.mkdir(parents=True, exist_ok=True)
+        tmp = logs_dir / "runner-state.json.tmp"
+        tmp.write_text(json.dumps(state, indent=2))
+        tmp.replace(logs_dir / "runner-state.json")
+    except Exception as e:
+        print(f"[runner] could not write runner-state.json: {e}",
+              flush=True)
+
+
+def reconcile_threads(live_config, shared, threads):
+    """Spawn watch threads for newly added streamers; signal stop for
+    removed ones. Threads is {(platform, channel): (thread, event)}.
+    A removed streamer's thread exits after its current stream ends.
+    """
+    cfg = live_config.get()
+    wanted = {}
+    for p, c, entry in normalize_streamers(cfg.get("streamers", [])):
+        wanted.setdefault((p, c), entry)
+    for key in list(threads):
+        if key not in wanted:
+            threads[key][1].set()
+            print(f"[runner] stopping watch for {key[0]}/{key[1]} "
+                  f"(removed from config)", flush=True)
+            del threads[key]
+        elif not threads[key][0].is_alive():
+            del threads[key]
+    for key, entry in wanted.items():
+        if key not in threads:
+            ev = threading.Event()
+            t = threading.Thread(
+                target=watch_streamer,
+                args=(key[0], key[1], entry, live_config, shared, ev),
+                daemon=True)
+            t.start()
+            threads[key] = (t, ev)
+            print(f"[runner] started watch for {key[0]}/{key[1]}",
+                  flush=True)
+
+
 def main():
-    config = load_config()
+    live_config = LiveConfig(HERE / "config.yaml")
+    config = live_config.get()
     entries = normalize_streamers(config["streamers"])
-    print(f"[runner] clipsdaily starting, {len(entries)} watches: "
+    print(f"[runner] {BRAND_NAME} starting, {len(entries)} watches: "
           + ", ".join(f"{p}/{c}" for p, c, _ in entries), flush=True)
     print("[runner] STOP file pauses posting: touch STOP to pause, "
           "rm STOP to resume", flush=True)
+    print("[runner] config reloads every 60s: edit config.yaml, no "
+          "restart needed", flush=True)
     # Cleanup on startup, then every hour in the background.
     run_cleanup(config)
     stop_hourly = threading.Event()
 
     def hourly():
         while not stop_hourly.wait(3600):
-            run_cleanup(config)
+            run_cleanup(live_config.get())
 
     threading.Thread(target=hourly, daemon=True).start()
     shared = SharedState(config["max_clips_per_day"])
-    threads = []
-    for platform, channel, entry in entries:
-        t = threading.Thread(target=watch_streamer,
-                             args=(platform, channel, entry, config, shared),
-                             daemon=True)
-        t.start()
-        threads.append(t)
+    threads = {}
+    reconcile_threads(live_config, shared, threads)
+    write_runner_state(live_config, shared, threads)
     try:
         while True:
             time.sleep(60)
+            if live_config.reload_if_changed():
+                cfg = live_config.get()
+                with shared.lock:
+                    shared.max_clips_per_day = cfg.get(
+                        "max_clips_per_day", shared.max_clips_per_day)
+                reconcile_threads(live_config, shared, threads)
+                print("[runner] config reloaded from config.yaml",
+                      flush=True)
+            else:
+                for key in list(threads):
+                    if not threads[key][0].is_alive():
+                        del threads[key]
+            write_runner_state(live_config, shared, threads)
     except KeyboardInterrupt:
         print("[runner] shutting down", flush=True)
 
