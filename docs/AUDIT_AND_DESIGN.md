@@ -1,11 +1,10 @@
 # ClipForge packaging — audit + design (branch: packaging/zero-intervention)
 
-Working brand: **ClipForge** (slug `clipforge`). The live system stays **ClipsDaily**
+Brand: **ClipForge** (slug `clipforge`) — FINAL, name locked Nov 16, 2026. The live system stays **ClipsDaily**
 (`/home/abel/clipsdaily/`, its tmux sessions, its crons) until the package ships and
 Abel says to switch. The Python package stays `clipsdaily` internally; all
 user-facing surfaces (installer, dashboard, systemd units, docs, wizard) use the
-brand constant in `src/clipsdaily/branding.py` (`BRAND_NAME`, `BRAND_SLUG`). A full
-Python-package rename is a follow-up after Abel confirms the name.
+brand constant in `src/clipsdaily/branding.py` (`BRAND_NAME`, `BRAND_SLUG`). A full Python-package rename is a follow-up (deferred; name now confirmed, rename tracked separately).
 
 ## Phase 1 — audit: every component, where it runs, every touchpoint
 
