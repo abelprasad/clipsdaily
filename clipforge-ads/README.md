@@ -127,9 +127,9 @@ They never show internals:
 - Architecture diagrams are allowed ONLY at outcome level: named stages (Watcher, Cutter, Ranker, Poster) with no code, paths, config, thresholds, weights, or ranking logic. Anything showing how the cutter or ranker works stays out.
 
 Amended Nov 17, 2026 (Abel approved): outcome-level architecture is allowed; the no-internals rule still stands for everything else.
-The Remotion project itself stays **private**: local git repo, no remote,
-no push, no public repo. The `voices/` model and `public/voiceover/` WAVs
-are gitignored. If a future variant wants an outcome shot (dashboard,
+The ads live in the clipsdaily repo under `clipforge-ads/` (public repo,
+ClipForge Proprietary License — see `clipforge-ads/LICENSE`). The `voices/`
+model and `public/voiceover/` WAVs are gitignored. If a future variant wants an outcome shot (dashboard,
 posted clip), use a screenshot or screen recording of the product's
 **output** — never a code editor, file tree, or log.
 
@@ -178,3 +178,8 @@ pages before rendering a new variant.
 - `voices/` — alternate Piper voice models (gitignored, download only;
   v2 uses Kokoro, kept for voice comparisons).
 - `out/` — renders (gitignored).
+
+## License
+
+ClipForge Proprietary License (see `LICENSE`). Licensed, not sold.
+No redistribution, resale, or sublicensing.
