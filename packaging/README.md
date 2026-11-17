@@ -3,11 +3,11 @@
 Fully automatic Twitch/Kick clip pipeline: record, cut, post. Zero
 human or agent intervention after a one-time setup.
 
-**ClipForge is proprietary and private.** See `LICENSE` (no
+**ClipForge is proprietary.** See `LICENSE` (no
 redistribution, no resale, no sublicensing) and `BETA_TERMS.md`.
-There is no public repo, no public installer, and no public docs for
-this product. Do not push this branch or these files anywhere public,
-and do not copy them into the public skills repo.
+The repo is public to read (Abel's call, Nov 17, 2026); public does
+not mean open source. Do not copy `packaging/` into the public
+skills repo.
 
 ## Install
 
@@ -53,7 +53,7 @@ requires no server:
   running, and it ties each copy to a named tester with an expiry.
   It is not DRM — a determined reverse-engineer can bypass any
   client-side check. The real protection is the license terms plus
-  keeping the distribution private. A future server check
+  the license-key gate. A future server check
   (revocation list / activation counting) would be added as a
   `verify_key_remote()` step in `license.py` that consults a vendor
   endpoint and caches the verdict; the local Ed25519 check stays as
@@ -85,12 +85,14 @@ into a customer install and must not be published.
 - `config/config.yaml.example` — config template.
 - `docs/` — internal design + audit docs (do not ship to customers).
 
-## Private by rule
+## Public repo, proprietary license
 
-- Never `git push` the `packaging/zero-intervention` branch (or any
-  branch carrying `packaging/`) to a public remote.
-- Never publish the installer, the setup docs, or the dashboard to a
-  public site.
+As of Nov 17, 2026 (Abel's decision) this repo is public to read at
+`github.com/abelprasad/clipsdaily`, including the `packaging/` branch.
+Public does NOT mean open source: the ClipForge Proprietary License
+("licensed, not sold") still forbids redistribution, resale, and
+sublicensing. The rules that still hold:
+
 - Never copy `packaging/` into the public skills repo.
 - The vendor private key is never committed, pasted in chat, or
   stored in the repo. If it is ever exposed, rotate the public key

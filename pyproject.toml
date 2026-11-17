@@ -39,7 +39,7 @@ dependencies = [
 clipsdaily = "clipsdaily.cli:main"
 clipforge = "clipsdaily.cli:main"
 
-# No public URLs: ClipForge is proprietary and private (see README).
+# Public repo, proprietary license: the code is public to read (see README), licensed not sold (see LICENSE).
 # The release channel (update_channel in config.yaml) is a private
 # repo, set by the vendor when one exists.
 
