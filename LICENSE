@@ -1,21 +1,46 @@
-MIT License
+ClipForge Proprietary License
 
-Copyright (c) 2026 Abel Prasad
+Copyright (c) 2026 Abel Prasad. All rights reserved.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+This software ("ClipForge") is proprietary. It is licensed, not sold,
+to the licensee named in the accompanying license key, under these terms:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+1. GRANT. The licensor grants the licensee a non-exclusive,
+   non-transferable license to install and run ClipForge on their own
+   hardware, for their own use, for the term of the license key.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+2. NO REDISTRIBUTION. The licensee may not copy, share, publish,
+   lend, rent, lease, resell, sublicense, or otherwise distribute
+   ClipForge, in whole or in part, to any other person or system.
+   A license key is personal to the named licensee and may not be shared.
+
+3. NO REVERSE ENGINEERING FOR COMPETITION. The licensee may not
+   reverse-engineer, decompile, or extract the internals of ClipForge
+   for the purpose of building a competing product. (See BETA_TERMS.md
+   for the beta-tester terms, which form part of this license.)
+
+4. NO MODIFICATION FOR REDISTRIBUTION. The licensee may configure
+   ClipForge through its documented settings. Modifying the software
+   to remove or bypass the license check, or to redistribute it,
+   terminates the license immediately.
+
+5. OWNERSHIP. ClipForge, including all source code, tuning, and
+   documentation, remains the exclusive property of the licensor.
+
+6. NO WARRANTY. ClipForge is provided "as is", without warranty of
+   any kind. The licensor is not liable for any loss of revenue,
+   content, or data arising from its use, including any platform
+   action (suspension, removal, or ban) on the licensee's accounts.
+
+7. TERMINATION. The license ends when the license key expires, when
+   the licensee breaches these terms, or when the licensor revokes the
+   key. On termination the licensee must delete all copies.
+
+8. SCOPE. This license governs the ClipForge software and documentation
+   in this repository, including the installer, setup wizard, dashboard,
+   systemd units, license-key check, and the packaged pipeline as shipped.
+   Third-party components in this repository retain their own licenses:
+   in particular, skills/motion-design/ is the LottieFiles
+   motion-design skill, licensed under the MIT License (see
+   skills/motion-design/SKILL.md). Third-party dependencies are
+   governed by their own licenses.

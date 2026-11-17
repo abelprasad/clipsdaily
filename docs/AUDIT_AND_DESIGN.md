@@ -237,13 +237,13 @@ degrade to "that leg paused + health.json flags it" — the core loop never stop
    MIT carriers found in the repo: root `LICENSE` (MIT) + pyproject
    `license = "MIT"`. The package's pyproject now says
    `Proprietary — see LICENSE` and the installer ships the proprietary
-   LICENSE. HONEST FLAG: the repo root MIT LICENSE file still exists,
-   so the underlying code in this repo is still MIT-licensed as
-   published — the proprietary terms govern the ClipForge *distribution*
-   (installer, wizard, dashboard, units, key check, packaged pipeline),
-   but a complete relicense means replacing the repo's LICENSE file
-   itself. That is Abel's legal call; until then the packaging branch
-   stays private and is never pushed to a public remote.
+   LICENSE. RESOLVED Nov 16, 2026 (Abel approved the relicense): the
+   repo-root `LICENSE` is now the ClipForge Proprietary License, so the
+   repository's own software is proprietary as published. The only
+   MIT-licensed code in the repo is the vendored third-party skill
+   `skills/motion-design/` (LottieFiles), which keeps its own MIT
+   license. The packaging branch stays private and is never pushed to
+   a public remote.
 2. **Private by rule.** No public push, no public repo, no publishing
    the installer or setup docs anywhere public, never in the public
    skills repo. The packaging branch is local-only.
