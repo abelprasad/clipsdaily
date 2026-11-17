@@ -1,0 +1,39 @@
+{
+  "name": "clipforge-ads",
+  "version": "1.0.0",
+  "description": "My Remotion video",
+  "repository": {},
+  "license": "UNLICENSED",
+  "engines": {
+    "node": "^20.19.0 || ^22.13.0 || >=24"
+  },
+  "private": true,
+  "dependencies": {
+    "@remotion/cli": "4.0.544",
+    "@remotion/media": "4.0.544",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "remotion": "4.0.544"
+  },
+  "devDependencies": {
+    "@remotion/eslint-config-flat": "4.0.544",
+    "@types/react": "19.3.0",
+    "@types/web": "0.0.166",
+    "eslint": "10.12.0",
+    "prettier": "3.8.1",
+    "typescript": "5.9.3"
+  },
+  "scripts": {
+    "dev": "remotion studio",
+    "build": "remotion bundle",
+    "upgrade": "remotion upgrade",
+    "lint": "eslint src && tsc",
+    "voiceover": "node scripts/generate-voiceover.mjs",
+    "render": "remotion render ReceiptReel out/receipt-reel-v6.mp4 --props=./src/script.json --license-key=free-license",
+    "retention-check": "python3 scripts/retention-check.py --out docs/retention-v6.txt",
+    "frames": "remotion render ReceiptReel out/v6-frames --props=./src/script.json --license-key=free-license --frames=135,240,390,510,645,735,900,1095 --image-format=png"
+  },
+  "allowScripts": {
+    "esbuild": false
+  }
+}

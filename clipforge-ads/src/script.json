@@ -1,0 +1,57 @@
+{
+  "beats": [
+    {
+      "id": "hook",
+      "kind": "hook",
+      "minSeconds": 5,
+      "text": "Streamers burn $49/mo on clips",
+      "voice": "Streamers burn forty-nine dollars a month on OpusClip and Claude credits, before a single clip goes live. Twenty-nine plus twenty, every month."
+    },
+    {
+      "id": "build",
+      "kind": "build",
+      "minSeconds": 6,
+      "text": "One setup, four parts",
+      "voice": "One setup, four parts. The watcher watches your stream. The cutter cuts the best moments. The ranker picks the winners. The poster posts them live."
+    },
+    {
+      "id": "mechanism",
+      "kind": "mechanism",
+      "minSeconds": 6,
+      "text": "Clips post while you're live",
+      "voice": "ClipForge cuts and posts while you're still live, riding the moment. Opus and Vizard wait for the VOD, after the moment's gone."
+    },
+    {
+      "id": "result",
+      "kind": "result",
+      "minSeconds": 6,
+      "text": "$0 credits burned",
+      "voice": "Zero dollars in credits burned. Clips post while you're live, twenty-four seven, automatic. One ninety-nine one-time, or nineteen to twenty-nine a month."
+    },
+    {
+      "id": "cta",
+      "kind": "cta",
+      "minSeconds": 3,
+      "subtext": "I'll DM you the link",
+      "text": "Comment CLIPFORGE",
+      "voice": "Comment CLIPFORGE, and I'll DM you the link."
+    }
+  ],
+  "fps": 30,
+  "height": 1920,
+  "timings": {
+    "hook": 8.79,
+    "build": 8.83,
+    "mechanism": 7.78,
+    "result": 9.37,
+    "cta": 3.31
+  },
+  "title": "Explainer v6 — $49/mo burn, four parts, live not VOD (Kokoro af_heart)",
+  "voice": {
+    "engine": "Kokoro (free, local, offline)",
+    "model": "af_heart",
+    "speed": 1.1,
+    "targetMeanDb": -17
+  },
+  "width": 1080
+}

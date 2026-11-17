@@ -1,0 +1,47 @@
+Retention check: out/receipt-reel-v6.mp4
+  script: src/script.json (Explainer v6 — $49/mo burn, four parts, live not VOD (Kokoro af_heart))
+  video 38.08s, 5 beats
+
+What this measures (heuristic only — no score, no watch-time prediction):
+  pace (wpm), dead air, beat holds, frozen picture, hook payoff estimate.
+
+== Pace ==
+  hook: 22 words / 8.79s = 150 wpm
+  build: 25 words / 8.83s = 170 wpm
+  mechanism: 22 words / 7.78s = 170 wpm
+  result: 22 words / 9.37s = 141 wpm
+  cta: 8 words / 3.31s = 145 wpm
+
+== Silence ==
+  gap 0.46s at 5.88s (beat hook) — under threshold, ok
+  gap 0.48s at 8.37s (beat hook) — under threshold, ok
+  gap 0.43s at 13.81s (beat build) — under threshold, ok
+  gap 0.49s at 17.20s (beat build) — under threshold, ok
+  gap 0.46s at 24.99s (beat mechanism) — under threshold, ok
+  gap 0.44s at 27.18s (beat result) — under threshold, ok
+  gap 0.33s at 30.94s (beat result) — under threshold, ok
+  gap 0.47s at 34.35s (beat result) — under threshold, ok
+  gap 0.43s at 37.65s (beat cta) — under threshold, ok
+
+== Beat hold ==
+  hook: beat 8.79s, voice 8.39s, hold 0.40s
+  build: beat 8.83s, voice 8.43s, hold 0.40s
+  mechanism: beat 7.78s, voice 7.38s, hold 0.40s
+  result: beat 9.37s, voice 8.97s, hold 0.40s
+  cta: beat 3.31s, voice 2.91s, hold 0.40s
+
+== Visual stasis ==
+  76 frames sampled at 2 fps, mean delta 2.59, range 1.29-16.28, 0 samples under 0.5
+
+== Hook payoff (estimate) ==
+  hook payoff word 3/22 ('forty-nine'), estimated at ~1.00s (linear word timing, not measured)
+
+== Flags ==
+[FLAG] Silence — mechanism @ 21.07s — 0.55s dead air at 21.07s (beat mechanism)
+        Fix: Trim the gap, or keep it if the pause is deliberate — it is the longest silence in the ad.
+
+== Warnings ==
+none
+
+Verdict: REVIEW — flags above, fix them before posting
+What this cannot catch: on-screen layout (empty bands, overlaps, text collisions), whether a claim is true, whether the hook is interesting, or anything about the audience. Watch the render once by eye.
