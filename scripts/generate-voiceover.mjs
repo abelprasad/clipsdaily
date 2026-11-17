@@ -9,7 +9,7 @@
 //     capped so the peak never exceeds -1.0 dB.
 //  2. Measures each WAV with ffprobe and writes per-beat seconds into
 //     script.json under `timings` (beat length = max(minSeconds,
-//     audioSeconds + 0.5s tail)). The composition reads `timings` to size
+//     audioSeconds + 0.4s tail)). The composition reads `timings` to size
 //     each beat, so narration and visuals stay in sync.
 //
 // Usage:
@@ -51,7 +51,7 @@ for (const beat of script.beats) {
       { encoding: "utf-8" },
     ).trim(),
   );
-  const seconds = Math.max(beat.minSeconds, dur + 0.5);
+  const seconds = Math.max(beat.minSeconds, dur + 0.4);
   timings[beat.id] = Number(seconds.toFixed(2));
   console.log(`[${beat.id}] ${dur.toFixed(2)}s audio, beat ${seconds.toFixed(2)}s`);
 }

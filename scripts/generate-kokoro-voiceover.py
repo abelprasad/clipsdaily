@@ -62,6 +62,25 @@ def main():
         with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
             raw_path = tmp.name
         sf.write(raw_path, audio, SAMPLE_RATE)
+        # v5 pace: trim Kokoro's leading/trailing silence (~0.3s + ~0.45s
+        # per beat) so inter-beat gaps are the 0.4s tail, not ~1.3s of dead
+        # air. Keeps 0.05s pads so onsets and decays survive; threshold
+        # -45dB sits below the quietest speech, above digital silence.
+        # NOTE: ffmpeg silenceremove was tried first and REJECTED — its stop
+        # side leaves no pad (verified: a v4 hook trimmed with it ends
+        # mid-sibilance at -24dB, decay chopped, audible cut). So trim by
+        # sample: first/last sample above -45dB, +/- 0.05s pad.
+        raw_audio, raw_sr = sf.read(raw_path)
+        mono = raw_audio[:, 0] if raw_audio.ndim > 1 else raw_audio
+        above = np.where(np.abs(mono) > 10 ** (-45 / 20))[0]
+        assert len(above), f"no audio above -45dB in {beat['id']}"
+        pad = int(0.05 * raw_sr)
+        start = max(0, int(above[0]) - pad)
+        end = min(len(raw_audio), int(above[-1]) + pad + 1)
+        trimmed_path = raw_path + ".trim.wav"
+        sf.write(trimmed_path, raw_audio[start:end], raw_sr)
+        os.unlink(raw_path)
+        raw_path = trimmed_path
         mean, maxv = volumedetect(raw_path)
         gain = target_mean - mean
         # Full gain to the target mean, then a lookahead limiter holds any

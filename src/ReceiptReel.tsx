@@ -50,7 +50,7 @@ type BeatPlan = Beat & {
   seconds: number;
 };
 
-// Beat length = generated voiceover length (+0.5s tail, baked into `timings`
+// Beat length = generated voiceover length (+0.4s tail, baked into `timings`
 // by `npm run voiceover`), falling back to minSeconds when no timings exist.
 export function getBeatPlan(script: ScriptData, fps: number): BeatPlan[] {
   let cursor = 0;

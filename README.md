@@ -5,13 +5,14 @@ Reusable template for ClipForge promo reels in the receipt format:
 Modeled on the @tech.happens ClipIt Studio reel (Dfz6w2PO6oy), with honest
 numbers — OpusClip Pro is **$29/mo**, not $19.
 
-- Format: 9:16 vertical, 1080×1920, 30 fps, ~40s (exact length comes from
+- Format: 9:16 vertical, 1080×1920, 30 fps, ~35s (exact length comes from
   the voiceover — see below)
 - Free only: Remotion is free for teams of 3 or fewer, system fonts only,
   no paid assets, no paid voice. Renders on indra with local tooling.
 - **v3 animation (Nov 16, 2026):** full reel style — an endless-runner background drawn in code (parallax skylines, scrolling ground, runner silhouette, coins, speed lines, all behind a scrim so copy stays legible) plus kinetic text: hook words pop in one at a time with the $49 counting up 0 → 49, receipt rows slide in, the total slams in, the CTA pulses. No ripped footage, no copyrighted assets.
+- **v5 pace (Nov 16, 2026):** same ad, faster — Kokoro speed 1.1, Kokoro leading/trailing silence trimmed (0.05s pads, sample-accurate; ffmpeg silenceremove was rejected: its stop side leaves no pad and clips final words), beat tail 0.4s, minSeconds floors lowered; 34.2s total, inter-beat gaps ~0.5s. No script, visual, or CTA change.
 - Voiceover: AI voice, never Abel's voice. Kokoro TTS (Kokoro-82M, MIT,
-  free, local, offline), voice `af_heart` at speed 0.95,
+  free, local, offline), voice `af_heart` at speed 1.1,
   loudness-normalized to -17 dB mean. Runs in `.venv-kokoro/`
   (installed once, see Voiceover section).
 
@@ -42,7 +43,7 @@ Fields per beat: `text` (on-screen + burned-in caption), `voice` (spoken
 line — write numbers out as words, e.g. "forty-nine dollars", never
 "$49"), `minSeconds` (shortest the beat can be), `subtext` (CTA only).
 `timings` is written by the voiceover script — do not hand-edit it.
-Beat length = max(minSeconds, voiceover seconds + 0.5s tail), so narration
+Beat length = max(minSeconds, voiceover seconds + 0.4s tail), so narration
 and visuals stay in sync. Total runtime = sum of beats.
 
 To render a variant without touching the file, pass props instead:
@@ -59,7 +60,7 @@ and beats fall back to `minSeconds` with no audio.)
 
 - Engine: Kokoro (`.venv-kokoro/`, `kokoro` + `misaki[en]` + spaCy
   `en_core_web_sm`, `espeak-ng` for phonemization), voice `af_heart`,
-  `speed` 0.95, `targetMeanDb` -17 (in `script.json` under `voice`).
+  `speed` 1.1, `targetMeanDb` -17 (in `script.json` under `voice`).
   Swap the voice by changing `voice.model` and re-running
   `npm run voiceover`. Samples of other voices live in
   `out/voice-samples/`.
