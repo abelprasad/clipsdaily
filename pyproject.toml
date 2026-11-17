@@ -21,7 +21,7 @@ classifiers = [
 dependencies = [
     "streamlink==8.6.3",
     "faster-whisper==1.2.1",
-    "instagrapi==3.1.0",
+    "instagrapi==3.2.15",  # 3.1.0 password login is broken (password_publickeys); fixed upstream in 3.2.3
     "tiktok-uploader==1.2.0",
     "google-api-python-client==2.196.0",
     "google-auth-oauthlib",
