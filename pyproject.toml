@@ -26,6 +26,8 @@ dependencies = [
     "google-api-python-client==2.196.0",
     "google-auth-oauthlib",
     "pyyaml",
+    "fastapi>=0.115",  # ClipForge dashboard (dashboard.py)
+    "uvicorn>=0.30",  # ClipForge dashboard server
     "requests",
     "playwright",
     "gtts",

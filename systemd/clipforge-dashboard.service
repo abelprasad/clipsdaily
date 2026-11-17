@@ -1,0 +1,21 @@
+# ClipForge dashboard — local web GUI (systemd user service)
+# Installed by the ClipForge installer into ~/.config/systemd/user/.
+# Do NOT enable/start by hand against the live ClipsDaily directory:
+# the dashboard serves whatever $CLIPSDAILY_HOME points at, and the
+# installer wires the runtime home up. Binds 127.0.0.1 only (v1 has
+# no auth; localhost is the trust boundary).
+[Unit]
+Description=ClipForge dashboard (local web GUI)
+After=network.target
+Wants=clipforge-runner.service
+
+[Service]
+Type=simple
+WorkingDirectory=%h/clipforge
+Environment=CLIPSDAILY_HOME=%h/clipforge
+ExecStart=/usr/bin/env python3 -m clipsdaily.dashboard --port 8787
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
