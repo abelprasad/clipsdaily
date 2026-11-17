@@ -1,0 +1,11 @@
+[Unit]
+Description=Clipsdaily Instagram poster (indra-side, replaces operator-VM cron)
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/abel/clipsdaily
+ExecStart=/home/abel/clipsdaily/.venv-ig/bin/python /home/abel/clipsdaily/ig_post_staged.py
+
+[Install]
+WantedBy=default.target

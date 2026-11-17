@@ -1,0 +1,13 @@
+[Unit]
+Description=Clipsdaily watchdog and health alerts
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/abel/clipsdaily
+ExecStart=/usr/bin/python3 /home/abel/clipsdaily/watchdog.py
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=default.target
